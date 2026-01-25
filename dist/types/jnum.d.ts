@@ -1,4 +1,3 @@
-type JNumConstructor = number | bigint;
 declare enum JNumType {
     FIXNUM = 0,
     BIGNUM = 1,
@@ -20,8 +19,17 @@ declare abstract class _JNum {
     isReal(): boolean;
     isComplex(): boolean;
 }
+type JNumIntegerConstructor = number | bigint;
+type JNumRealConstructor = number | bigint;
+type JNumConstructor = number | bigint | {
+    real: JNumRealConstructor;
+    imag: JNumRealConstructor;
+} | {
+    num: JNumIntegerConstructor;
+    den: JNumIntegerConstructor;
+};
 export declare const JNum: {
-    (num: JNumConstructor): _JNum;
+    (num: JNumConstructor, exact?: boolean): _JNum;
     isZero(num: _JNum): boolean;
 };
 export {};

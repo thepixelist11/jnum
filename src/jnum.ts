@@ -1,4 +1,3 @@
-type JNumConstructor = number | bigint;
 type PrimitiveHint = "string" | "number" | "default";
 
 enum JNumType {
@@ -214,6 +213,25 @@ class RationalNum extends ExactNum {
         )
     }
 
+    public static createFromDecimal(x: number | bigint) {
+        if (typeof x === "bigint") return BigNum.create(x);
+
+        const s = x.toString();
+
+        if (!s.includes("."))
+            return BigNum.create(BigInt(s));
+
+        const [int_part, frac_part] = s.split(".");
+        const scale = 10n ** BigInt(frac_part.length);
+
+        const numerator = BigInt(int_part) * scale + BigInt(frac_part);
+
+        return RationalNum.create(
+            BigNum.create(numerator),
+            BigNum.create(scale),
+        );
+    }
+
     public override[Symbol.toStringTag]() { return "RationalNum"; }
     public override[Symbol.toPrimitive](hint: PrimitiveHint) {
         const raw = this.numerator.toBigInt() / this.denominator.toBigInt();
@@ -232,7 +250,9 @@ class RationalNum extends ExactNum {
             : this;
     }
 
-    public override promoteTo(target: JNumType.FIXNUM | JNumType.BIGNUM): never;
+    public override promoteTo(target:
+        | JNumType.BIGNUM
+        | JNumType.FIXNUM): never;
     public override promoteTo(target: JNumType.RATIONAL): RationalNum;
     public override promoteTo(target: JNumType.REAL): RealNum;
     public override promoteTo(target: JNumType.COMPLEX): ComplexNum;
@@ -301,7 +321,10 @@ class InexactRealNum extends InexactNum implements RealNum {
         return FixNum.create(n);
     }
 
-    public override promoteTo(target: JNumType.RATIONAL | JNumType.BIGNUM | JNumType.FIXNUM): never;
+    public override promoteTo(target:
+        | JNumType.RATIONAL
+        | JNumType.BIGNUM
+        | JNumType.FIXNUM): never;
     public override promoteTo(target: JNumType.REAL): RealNum;
     public override promoteTo(target: JNumType.COMPLEX): ComplexNum;
     public override promoteTo(target: JNumType): _JNum {
@@ -356,7 +379,10 @@ class ExactRealNum extends ExactNum implements RealNum {
             : this;
     }
 
-    public override promoteTo(target: JNumType.RATIONAL | JNumType.BIGNUM | JNumType.FIXNUM): never;
+    public override promoteTo(target:
+        | JNumType.RATIONAL
+        | JNumType.BIGNUM
+        | JNumType.FIXNUM): never;
     public override promoteTo(target: JNumType.REAL): RealNum;
     public override promoteTo(target: JNumType.COMPLEX): ComplexNum;
     public override promoteTo(target: JNumType): _JNum {
@@ -414,7 +440,11 @@ class ComplexNum extends _JNum {
             : this;
     }
 
-    public override promoteTo(target: JNumType.REAL | JNumType.RATIONAL | JNumType.BIGNUM | JNumType.FIXNUM): never;
+    public override promoteTo(target:
+        | JNumType.REAL
+        | JNumType.RATIONAL
+        | JNumType.BIGNUM
+        | JNumType.FIXNUM): never;
     public override promoteTo(target: JNumType.COMPLEX): ComplexNum;
     public override promoteTo(target: JNumType): _JNum {
         switch (target) {
@@ -427,9 +457,66 @@ class ComplexNum extends _JNum {
     }
 }
 
+/* =================== Utilities ======================== */
+
+function has<T extends PropertyKey>(obj: object, key: T): obj is object & Record<T, unknown> {
+    return Object.hasOwn(obj, key);
+}
+
+/* ==================== Exports ========================= */
+
+type JNumIntegerConstructor =
+    | number
+    | bigint;
+
+type JNumRealConstructor =
+    | number
+    | bigint;
+
+type JNumConstructor =
+    | number
+    | bigint
+    | { real: JNumRealConstructor, imag: JNumRealConstructor }
+    | { num: JNumIntegerConstructor, den: JNumIntegerConstructor };
+
 export const JNum = (function () {
-    function JNum(num: JNumConstructor): _JNum {
-        console.log(`creating: ${num}`);
+    function constructJNumFromNumber(num: number | bigint, exact: boolean): _JNum {
+        if ((exact && Number.isInteger(num)) || typeof num === "bigint")
+            return BigNum.create(num);
+
+        if (exact)
+            return RationalNum.createFromDecimal(num);
+
+        return InexactRealNum.create(num);
+    }
+
+    function constructJNumFromObject(num: JNumConstructor & Object, exact: boolean): _JNum {
+        if (has(num, "real") && has(num, "imag"))
+            return ComplexNum.create(JNum(num.real, exact), JNum(num.imag, exact))
+
+        if (has(num, "num") && has(num, "den")) {
+            const n = JNum(num.num, exact).demote();
+            const d = JNum(num.den, exact).demote();
+
+            if (!(n instanceof IntegerNum))
+                throw new Error("Cannot construct a RationalNum with non-integer numerator");
+
+            if (!(d instanceof IntegerNum))
+                throw new Error("Cannot construct a RationalNum with non-integer denominator");
+
+            return RationalNum.create(n, d);
+        }
+
+        throw new Error("Unknown object-based JNum constructor type");
+    }
+
+    function JNum(num: JNumConstructor, exact: boolean = true): _JNum {
+        if (typeof num === "number" || typeof num === "bigint")
+            return constructJNumFromNumber(num, exact);
+
+        if (typeof num === "object")
+            return constructJNumFromObject(num, exact);
+
         return FixNum.create(0);
     }
 
