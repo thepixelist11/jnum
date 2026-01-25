@@ -1,0 +1,59 @@
+{
+    "name": "jnum",
+    "description": "A fast, powerful, and easy-to-use arbitrary precision math library for JavaScript and TypeScript.",
+    "version": "0.1.0",
+    "homepage": "https://github.com/thepixelist11/jnum",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/thepixelist11/jnum"
+    },
+    "bugs": {
+        "url": "https://github.com/thepixelist11/jnum/issues"
+    },
+    "scripts": {
+        "build": "./scripts/build.sh",
+        "build:fast": "./scripts/build-fast.sh",
+        "dev": "nodemon --watch ./src/*.ts --exec ./scripts/build-fast.sh"
+    },
+    "keywords": [
+        "library",
+        "math",
+        "number",
+        "calculation",
+        "integer",
+        "complex",
+        "numeric"
+    ],
+    "author": "thepixelist11",
+    "license": "MIT",
+    "type": "module",
+    "main": "./dist/index.cjs.js",
+    "module": "./dist/index.esm.js",
+    "types": "./dist/types/index.d.ts",
+    "exports": {
+        ".": {
+            "require": "./dist/index.cjs.js",
+            "import": "./dist/index.esm.js",
+            "types": "./dist/types/index.d.ts"
+        }
+    },
+    "files": [
+        "./dist/types",
+        "./dist/index.cjs.js",
+        "./dist/index.esm.js"
+    ],
+    "devDependencies": {
+        "@eslint/js": "^9.39.2",
+        "@rollup/plugin-node-resolve": "^16.0.0",
+        "@rollup/plugin-terser": "^0.4.4",
+        "@types/node": "^22.13.10",
+        "eslint": "^9.39.2",
+        "express": "^4.21.2",
+        "jest": "^29.7.0",
+        "nodemon": "^3.1.9",
+        "rollup": "^4.35.0",
+        "rollup-plugin-typescript2": "^0.36.0",
+        "typescript": "^5.8.2",
+        "typescript-eslint": "^8.53.1"
+    }
+}

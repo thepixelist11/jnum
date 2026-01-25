@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig.json",
+    "compilerOptions": {
+        "target": "ES2020",
+        "lib": [
+            "es6",
+            "dom",
+            "es2020",
+        ],
+        "module": "ESNext",
+        "rootDir": "./src",
+        "moduleResolution": "node",
+        "baseUrl": "./src",
+        "allowJs": true,
+        "declaration": true,
+        "declarationDir": "./dist/types",
+        "declarationMap": true,
+        "stripInternal": true,
+        "outDir": "./dist/esm",
+        "removeComments": false,
+        "noEmitOnError": true,
+        "allowSyntheticDefaultImports": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "noImplicitReturns": true,
+        "skipLibCheck": false,
+        "esModuleInterop": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": false,
+    },
+    "include": [
+        "src"
+    ],
+    "exclude": [
+        "node_modules/"
+    ],
+}
