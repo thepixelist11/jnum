@@ -8,13 +8,15 @@ declare enum JNumType {
 declare abstract class _JNum {
     abstract readonly type: JNumType;
     abstract isExact(): boolean;
+    abstract isFinite(): boolean;
+    abstract isNaN(): boolean;
     abstract normalize(): _JNum;
     abstract canDemote(): boolean;
     abstract demote(): _JNum;
     abstract promoteTo(target: JNumType): _JNum;
     abstract [Symbol.toPrimitive](hint: string): unknown;
     abstract [Symbol.toStringTag](): string;
-    isInteger(): boolean;
+    isExactInteger(): boolean;
     isRational(): boolean;
     isReal(): boolean;
     isComplex(): boolean;

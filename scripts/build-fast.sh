@@ -1,14 +1,19 @@
 #!/bin/bash
-
 set -e
 
-echo "Building"
+echo "=== Fast Build ==="
+
+# Clean
+rm -rf dist
+
+# Compile
 npx tsc -p tsconfig.json
 npx tsc -p tsconfig.cjs.json
 
-echo "Minifying"
+# Rollup
 npx rollup -c
 
-echo "Removing Build Files"
-rm -r ./dist/esm
-rm -r ./dist/cjs
+# Remove unnecessary files
+rm -rf ./dist/esm ./dist/cjs
+
+echo "Fast build complete."

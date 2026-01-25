@@ -11,6 +11,8 @@ enum JNumType {
 abstract class _JNum {
     abstract readonly type: JNumType;
     abstract isExact(): boolean;
+    abstract isFinite(): boolean;
+    abstract isNaN(): boolean;
     abstract normalize(): _JNum;
     abstract canDemote(): boolean;
     abstract demote(): _JNum;
@@ -19,10 +21,10 @@ abstract class _JNum {
     abstract [Symbol.toPrimitive](hint: string): unknown;
     abstract [Symbol.toStringTag](): string;
 
-    isInteger(): boolean { return this.type <= JNumType.BIGNUM; }
-    isRational(): boolean { return this.type <= JNumType.RATIONAL; }
-    isReal(): boolean { return this.type <= JNumType.REAL; }
-    isComplex(): boolean { return this.type <= JNumType.COMPLEX; }
+    isExactInteger(): boolean { return this.type <= JNumType.BIGNUM && !this.isNaN(); }
+    isRational(): boolean { return this.type <= JNumType.RATIONAL && !this.isNaN(); }
+    isReal(): boolean { return this.type <= JNumType.REAL && !this.isNaN(); }
+    isComplex(): boolean { return this.type <= JNumType.COMPLEX && !this.isNaN(); }
 }
 
 abstract class ExactNum extends _JNum {
@@ -70,6 +72,9 @@ class FixNum extends IntegerNum {
 
         return this.raw;
     }
+
+    public override isFinite(): boolean { return Number.isFinite(this.raw); }
+    public override isNaN(): boolean { return Number.isNaN(this.raw); }
 
     public override normalize(): _JNum { return this; }
     public override canDemote(): boolean { return false; }
@@ -134,6 +139,9 @@ class BigNum extends IntegerNum {
         return this.raw;
     }
 
+    public override isFinite(): boolean { return true; }
+    public override isNaN(): boolean { return Number.isNaN(this.raw); }
+
     public override normalize(): _JNum { return BigNum.create(this.value); }
     public override canDemote(): boolean {
         return FixNum.MIN <= this.value && this.value <= FixNum.MAX;
@@ -187,6 +195,8 @@ class RationalNum extends ExactNum {
     }
 
     public static create(numerator: IntegerNum, denominator: IntegerNum): _JNum {
+        if (!denominator.isFinite()) throw new Error("Expected Rational denominator to be finite");
+
         const n = numerator.toBigInt();
         const d = denominator.toBigInt();
 
@@ -216,6 +226,9 @@ class RationalNum extends ExactNum {
     public static createFromDecimal(x: number | bigint) {
         if (typeof x === "bigint") return BigNum.create(x);
 
+        if (Number.isNaN(x)) return InexactRealNum.create(NaN);
+        if (!Number.isFinite(x)) return InexactRealNum.create(Infinity);
+
         const s = x.toString();
 
         if (!s.includes("."))
@@ -241,6 +254,9 @@ class RationalNum extends ExactNum {
 
         return raw;
     }
+
+    public override isFinite(): boolean { return this.numerator.isFinite(); }
+    public override isNaN(): boolean { return this.numerator.isNaN() || this.denominator.isNaN() || JNum.isZero(this.denominator); }
 
     public override normalize(): _JNum { return RationalNum.create(this.numerator, this.denominator); }
     public override canDemote(): boolean { return this.denominator.toBigInt() === 1n; }
@@ -305,6 +321,9 @@ class InexactRealNum extends InexactNum implements RealNum {
         return this.raw;
     }
 
+    public override isFinite(): boolean { return Number.isFinite(this.raw); }
+    public override isNaN(): boolean { return Number.isNaN(this.raw); }
+
     public override normalize(): _JNum { return this; }
     public override canDemote(): boolean {
         return (
@@ -364,6 +383,9 @@ class ExactRealNum extends ExactNum implements RealNum {
     }
 
     public static create(value: RationalNum): ExactRealNum { return new ExactRealNum(value); }
+
+    public override isFinite(): boolean { return this.value.isFinite(); }
+    public override isNaN(): boolean { return this.value.isNaN(); }
 
     public override normalize(): _JNum {
         const v = this.value.normalize();
@@ -431,6 +453,8 @@ class ComplexNum extends _JNum {
     }
 
     public override isExact(): boolean { return this.real.isExact() && this.imag.isExact(); }
+    public override isFinite(): boolean { return this.real.isFinite() && this.imag.isFinite(); }
+    public override isNaN(): boolean { return this.real.isNaN() || this.imag.isNaN(); }
 
     public override normalize(): _JNum { return ComplexNum.create(this.real, this.imag); }
     public override canDemote(): boolean { return JNum.isZero(this.imag); }
@@ -490,9 +514,10 @@ export const JNum = (function () {
         return InexactRealNum.create(num);
     }
 
-    function constructJNumFromObject(num: JNumConstructor & Object, exact: boolean): _JNum {
-        if (has(num, "real") && has(num, "imag"))
+    function constructJNumFromObject(num: JNumConstructor & object, exact: boolean): _JNum {
+        if (has(num, "real") && has(num, "imag")) {
             return ComplexNum.create(JNum(num.real, exact), JNum(num.imag, exact))
+        }
 
         if (has(num, "num") && has(num, "den")) {
             const n = JNum(num.num, exact).demote();
@@ -510,14 +535,14 @@ export const JNum = (function () {
         throw new Error("Unknown object-based JNum constructor type");
     }
 
-    function JNum(num: JNumConstructor, exact: boolean = true): _JNum {
+    function JNum(num: JNumConstructor, exact = true): _JNum {
         if (typeof num === "number" || typeof num === "bigint")
             return constructJNumFromNumber(num, exact);
 
         if (typeof num === "object")
             return constructJNumFromObject(num, exact);
 
-        return FixNum.create(0);
+        throw new Error(`Invalid JNum constructor of type ${typeof num}`);
     }
 
     JNum.isZero = (num: _JNum): boolean => {
