@@ -1,11 +1,19 @@
 type PrimitiveHint = "string" | "number" | "default";
 
-enum JNumType {
+export enum JNumType {
     FIXNUM = 0,
     BIGNUM = 1,
     RATIONAL = 2,
     REAL = 3,
     COMPLEX = 4,
+};
+
+interface JNumByType {
+    [JNumType.FIXNUM]: FixNum;
+    [JNumType.BIGNUM]: BigNum;
+    [JNumType.RATIONAL]: RationalNum;
+    [JNumType.REAL]: RealNum;
+    [JNumType.COMPLEX]: ComplexNum;
 };
 
 abstract class _JNum {
@@ -16,15 +24,16 @@ abstract class _JNum {
     abstract normalize(): _JNum;
     abstract canDemote(): boolean;
     abstract demote(): _JNum;
-    abstract promoteTo(target: JNumType): _JNum;
+    abstract promoteTo<T extends JNumType>(target: T): JNumByType[T];
 
-    abstract [Symbol.toPrimitive](hint: string): unknown;
+    abstract [Symbol.toPrimitive](hint: string): number | string;
     abstract [Symbol.toStringTag](): string;
 
-    isExactInteger(): boolean { return this.type <= JNumType.BIGNUM && !this.isNaN(); }
+    isInteger(): boolean { return this.type <= JNumType.BIGNUM && !this.isNaN(); }
     isRational(): boolean { return this.type <= JNumType.RATIONAL && !this.isNaN(); }
     isReal(): boolean { return this.type <= JNumType.REAL && !this.isNaN(); }
     isComplex(): boolean { return this.type <= JNumType.COMPLEX && !this.isNaN(); }
+    toString(): string { return `${this}` };
 }
 
 abstract class ExactNum extends _JNum {
@@ -56,9 +65,7 @@ class FixNum extends IntegerNum {
     }
 
     public static create(value: number): FixNum {
-        if (!Number.isInteger(value))
-            value = Math.trunc(value);
-
+        value = Math.trunc(value);
         if (value < FixNum.MIN || value > FixNum.MAX)
             throw new Error(`Value out of fixnum range: expected ${value} to be between ${FixNum.MIN} and ${FixNum.MAX}`);
 
@@ -91,16 +98,16 @@ class FixNum extends IntegerNum {
                 return this;
 
             case JNumType.BIGNUM:
-                return BigNum.create(this.value);
+                return BigNum.create(this.value, false);
 
             case JNumType.RATIONAL:
-                return RationalNum.create(this, FixNum.create(1));
+                return RationalNum.create(this, FixNum.create(1), false);
 
             case JNumType.REAL:
                 return ExactRealNum.create(this.promoteTo(JNumType.RATIONAL));
 
             case JNumType.COMPLEX:
-                return ComplexNum.create(this, FixNum.create(0));
+                return ComplexNum.create(this, FixNum.create(0), false);
 
             default:
                 throw new Error(`Cannot promote FixNum directly to ${JNumType[target]}`);
@@ -123,8 +130,8 @@ class BigNum extends IntegerNum {
         this.value = value;
     }
 
-    public static create(value: bigint | number): IntegerNum {
-        if (FixNum.MIN <= value && value <= FixNum.MAX)
+    public static create(value: bigint | number, demote = true): IntegerNum {
+        if (demote && FixNum.MIN <= value && value <= FixNum.MAX)
             return FixNum.create(Number(value));
 
         value = typeof value === "bigint" ? value : BigInt(Math.trunc(value));
@@ -136,7 +143,7 @@ class BigNum extends IntegerNum {
         if (hint === "string")
             return this.raw.toString();
 
-        return this.raw;
+        return Number(this.raw);
     }
 
     public override isFinite(): boolean { return true; }
@@ -163,13 +170,13 @@ class BigNum extends IntegerNum {
                 return this;
 
             case JNumType.RATIONAL:
-                return RationalNum.create(this, FixNum.create(1));
+                return RationalNum.create(this, FixNum.create(1), false);
 
             case JNumType.REAL:
                 return ExactRealNum.create(this.promoteTo(JNumType.RATIONAL));
 
             case JNumType.COMPLEX:
-                return ComplexNum.create(this, FixNum.create(0));
+                return ComplexNum.create(this, FixNum.create(0), false);
 
             default:
                 throw new Error(`Cannot promote BigNum directly to ${JNumType[target]}`);
@@ -194,7 +201,7 @@ class RationalNum extends ExactNum {
         this.denominator = denominator;
     }
 
-    public static create(numerator: IntegerNum, denominator: IntegerNum): _JNum {
+    public static create(numerator: IntegerNum, denominator: IntegerNum, demote = true): _JNum {
         if (!denominator.isFinite()) throw new Error("Expected Rational denominator to be finite");
 
         const n = numerator.toBigInt();
@@ -213,9 +220,8 @@ class RationalNum extends ExactNum {
         nn /= g;
         dd /= g;
 
-        if (dd === 1n) {
+        if (demote && dd === 1n)
             return BigNum.create(nn);
-        }
 
         return new RationalNum(
             BigNum.create(nn),
@@ -247,10 +253,10 @@ class RationalNum extends ExactNum {
 
     public override[Symbol.toStringTag]() { return "RationalNum"; }
     public override[Symbol.toPrimitive](hint: PrimitiveHint) {
-        const raw = this.numerator.toBigInt() / this.denominator.toBigInt();
+        const raw = Number(this.numerator.toBigInt()) / Number(this.denominator.toBigInt());
 
         if (hint === "string")
-            return raw.toString();
+            return `${this.numerator}/${this.denominator}`;
 
         return raw;
     }
@@ -259,11 +265,17 @@ class RationalNum extends ExactNum {
     public override isNaN(): boolean { return this.numerator.isNaN() || this.denominator.isNaN() || JNum.isZero(this.denominator); }
 
     public override normalize(): _JNum { return RationalNum.create(this.numerator, this.denominator); }
-    public override canDemote(): boolean { return this.denominator.toBigInt() === 1n; }
+    public override canDemote(): boolean { return this.numerator.canDemote() || this.denominator.canDemote() || this.denominator.toBigInt() === 1n; }
     public override demote(): _JNum {
-        return this.canDemote()
-            ? BigNum.create(this.numerator.toBigInt())
-            : this;
+        if (!this.canDemote()) return this;
+
+        const num = this.numerator.demote() as IntegerNum;
+        const den = this.denominator.demote() as IntegerNum;
+
+        if (den.toBigInt() === 1n)
+            return num;
+
+        return RationalNum.create(num, den);
     }
 
     public override promoteTo(target:
@@ -281,14 +293,14 @@ class RationalNum extends ExactNum {
                 return ExactRealNum.create(this);
 
             case JNumType.COMPLEX:
-                return ComplexNum.create(this, FixNum.create(0));
+                return ComplexNum.create(this, FixNum.create(0), false);
 
             default:
                 throw new Error(`Cannot promote RationalNum directly to ${JNumType[target]}`);
         }
     }
 
-    private static gcd(a: bigint, b: bigint): bigint {
+    public static gcd(a: bigint, b: bigint): bigint {
         let x = a;
         let y = b;
         while (y !== 0n) {
@@ -312,6 +324,11 @@ class InexactRealNum extends InexactNum implements RealNum {
     public static create(value: number): InexactRealNum {
         return new InexactRealNum(value);
     }
+
+    isInteger(): boolean { return Number.isInteger(this.raw) && this.isRational() }
+    isRational(): boolean { return this.isReal() && this.isFinite(); }
+    isReal(): boolean { return !this.isNaN(); }
+    isComplex(): boolean { return !this.isNaN(); }
 
     public override[Symbol.toStringTag]() { return "InexactRealNum"; }
     public override[Symbol.toPrimitive](hint: PrimitiveHint) {
@@ -352,7 +369,7 @@ class InexactRealNum extends InexactNum implements RealNum {
                 return this;
 
             case JNumType.COMPLEX:
-                return ComplexNum.create(this, FixNum.create(0));
+                return ComplexNum.create(this, FixNum.create(0), false);
 
             default:
                 throw new Error(`Cannot promote InexactRealNum directly to ${JNumType[target]}`);
@@ -377,9 +394,9 @@ class ExactRealNum extends ExactNum implements RealNum {
     public override[Symbol.toStringTag]() { return "ExactRealNum"; }
     public override[Symbol.toPrimitive](hint: PrimitiveHint) {
         if (hint === "string")
-            return this.value.toString();
+            return this.value.demote().toString();
 
-        return +this.value;
+        return +this.value.demote();
     }
 
     public static create(value: RationalNum): ExactRealNum { return new ExactRealNum(value); }
@@ -413,7 +430,7 @@ class ExactRealNum extends ExactNum implements RealNum {
                 return this;
 
             case JNumType.COMPLEX:
-                return ComplexNum.create(this, FixNum.create(0));
+                return ComplexNum.create(this, FixNum.create(0), false);
 
             default:
                 throw new Error(`Cannot promote ExactRealNum directly to ${JNumType[target]}`);
@@ -435,20 +452,21 @@ class ComplexNum extends _JNum {
         this.imag = imag;
     }
 
-    public static create(real: RealNum, imag: RealNum): _JNum {
+    public static create(real: RealNum, imag: RealNum, demote = true): _JNum {
         const r = real.normalize();
         const i = imag.normalize();
 
         if (!r.isReal() || !i.isReal())
             throw new Error("ComplexNum components must be real-valued");
 
-        if (JNum.isZero(i)) return r;
+        if (demote && JNum.isZero(i)) return r;
 
         return new ComplexNum(r, i);
     }
 
     public override[Symbol.toStringTag]() { return "ComplexNum"; }
     public override[Symbol.toPrimitive]() {
+        // TODO: Display - instead of + for imaginary part if applicable
         return `${this.real.toString()}+${this.imag.toString()}i`;
     }
 
@@ -457,11 +475,17 @@ class ComplexNum extends _JNum {
     public override isNaN(): boolean { return this.real.isNaN() || this.imag.isNaN(); }
 
     public override normalize(): _JNum { return ComplexNum.create(this.real, this.imag); }
-    public override canDemote(): boolean { return JNum.isZero(this.imag); }
+    public override canDemote(): boolean { return this.real.canDemote() || this.imag.canDemote() || JNum.isZero(this.imag); }
     public override demote(): _JNum {
-        return this.canDemote()
-            ? this.real.normalize()
-            : this;
+        if (!this.canDemote()) return this;
+
+        const re = this.real.demote();
+        const im = this.imag.demote();
+
+        if (JNum.isZero(im))
+            return im;
+
+        return ComplexNum.create(re, im);
     }
 
     public override promoteTo(target:
@@ -481,6 +505,215 @@ class ComplexNum extends _JNum {
     }
 }
 
+/* =================== Operations ======================= */
+
+function getUnifiedJNumTypes(...nums: _JNum[]): { type: JNumType, exact: boolean } {
+    let max_type = -1;
+    let exact = true;
+    for (const n of nums) {
+        if (n.type > max_type) max_type = n.type;
+        if (!n.isExact()) exact = false;
+    }
+
+    if (max_type === -1)
+        throw new Error("getUnifiedJNumTypes requires at least one argument");
+
+    return { type: max_type, exact };
+}
+
+type BinaryKernel<T extends JNumType, R> = (lhs: JNumByType[T], rhs: JNumByType[T]) => R;
+enum Operation { "add", "sub", "mul", "div", "pow", "lt", "lte", "gt", "gte", "eq" };
+type OperationTable = Record<Operation, {
+    [T in JNumType]?: BinaryKernel<T, unknown>;
+}>;
+
+type BinaryOpKernel<T extends JNumType, R extends _JNum> =
+    (lhs: JNumByType[T], rhs: JNumByType[T]) => R;
+
+const makeTypedBinaryOp =
+    <WorkT extends JNumType, Result extends _JNum>(
+        work_type: WorkT,
+        kernel: BinaryOpKernel<WorkT, Result>
+    ): BinaryKernel<JNumType, _JNum> => {
+        return (lhs, rhs) => {
+            const targetType =
+                lhs.type >= rhs.type ? lhs.type : rhs.type;
+
+            if (targetType > work_type)
+                throw new Error(`Operation not defined for ${JNumType[work_type]}`);
+
+            const a = (lhs as _JNum).promoteTo(work_type);
+            const b = (rhs as _JNum).promoteTo(work_type);
+
+            const r = kernel(a, b);
+
+            let out: _JNum = r.normalize();
+            while (out.canDemote())
+                out = out.demote();
+
+            return out;
+        };
+    };
+
+const integerAdd: BinaryOpKernel<JNumType.BIGNUM | JNumType.FIXNUM, IntegerNum> =
+    (a, b) => BigNum.create(a.toBigInt() + b.toBigInt(), false);
+
+const integerSub: BinaryOpKernel<JNumType.BIGNUM | JNumType.FIXNUM, IntegerNum> =
+    (a, b) => BigNum.create(a.toBigInt() - b.toBigInt(), false);
+
+const integerMul: BinaryOpKernel<JNumType.BIGNUM | JNumType.FIXNUM, IntegerNum> =
+    (a, b) => BigNum.create(a.toBigInt() * b.toBigInt(), false);
+
+const integerDiv: BinaryOpKernel<JNumType.BIGNUM | JNumType.FIXNUM, ExactNum> =
+    (a, b) => RationalNum.create(a, b, false);
+
+const rationalAdd: BinaryOpKernel<JNumType.RATIONAL, ExactNum> =
+    (a, b) => {
+        const n =
+            a.numerator.toBigInt() * b.denominator.toBigInt() +
+            b.numerator.toBigInt() * a.denominator.toBigInt();
+
+        const d = a.denominator.toBigInt() * b.denominator.toBigInt();
+
+        return RationalNum.create(
+            BigNum.create(n, false),
+            BigNum.create(d, false),
+            false
+        );
+    };
+
+const rationalSub: BinaryOpKernel<JNumType.RATIONAL, ExactNum> =
+    (a, b) => {
+        const n =
+            a.numerator.toBigInt() * b.denominator.toBigInt() -
+            b.numerator.toBigInt() * a.denominator.toBigInt();
+
+        const d = a.denominator.toBigInt() * b.denominator.toBigInt();
+
+        return RationalNum.create(
+            BigNum.create(n, false),
+            BigNum.create(d, false),
+            false
+        );
+    };
+
+const rationalMul: BinaryOpKernel<JNumType.RATIONAL, ExactNum> =
+    (a, b) => {
+        const n = a.numerator.toBigInt() * b.numerator.toBigInt();
+        const d = a.denominator.toBigInt() * b.denominator.toBigInt();
+
+        return RationalNum.create(
+            BigNum.create(n, false),
+            BigNum.create(d, false),
+            false
+        );
+    };
+
+const rationalDiv: BinaryOpKernel<JNumType.RATIONAL, ExactNum> =
+    (a, b) => {
+        const n = a.numerator.toBigInt() * b.denominator.toBigInt();
+        const d = a.denominator.toBigInt() * b.numerator.toBigInt();
+
+        return RationalNum.create(
+            BigNum.create(n, false),
+            BigNum.create(d, false),
+            false
+        );
+    };
+
+const realAdd: BinaryOpKernel<JNumType.REAL, RealNum> =
+    (a, b) => {
+        if (!(a.isExact() && b.isExact())) {
+            return InexactRealNum.create(+a + +b);
+        }
+
+        const l = a.promoteTo(JNumType.REAL);
+        const r = b.promoteTo(JNumType.REAL);
+
+        return rationalAdd(
+            (l as ExactRealNum).value,
+            (r as ExactRealNum).value
+        );
+    }
+
+const realSub: BinaryOpKernel<JNumType.REAL, RealNum> =
+    (a, b) => {
+        if (!(a.isExact() && b.isExact())) {
+            return InexactRealNum.create(+a - +b);
+        }
+
+        const l = a.promoteTo(JNumType.REAL);
+        const r = b.promoteTo(JNumType.REAL);
+
+        return rationalSub(
+            (l as ExactRealNum).value,
+            (r as ExactRealNum).value
+        );
+    }
+
+const complexAdd: BinaryOpKernel<JNumType.COMPLEX, _JNum> =
+    (a, b) => {
+        return ComplexNum.create(
+            realAdd(a.real, b.real),
+            realAdd(a.imag, b.imag),
+        );
+    }
+
+const complexSub: BinaryOpKernel<JNumType.COMPLEX, _JNum> =
+    (a, b) => {
+        return ComplexNum.create(
+            realSub(a.real, b.real),
+            realSub(a.imag, b.imag),
+        );
+    }
+
+const OPERATION_TABLE: OperationTable = {
+    [Operation.add]: {
+        [JNumType.FIXNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerAdd),
+        [JNumType.BIGNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerAdd),
+        [JNumType.RATIONAL]: makeTypedBinaryOp(JNumType.RATIONAL, rationalAdd),
+        [JNumType.REAL]: makeTypedBinaryOp(JNumType.REAL, realAdd),
+        [JNumType.COMPLEX]: makeTypedBinaryOp(JNumType.COMPLEX, complexAdd),
+    },
+    [Operation.sub]: {
+        [JNumType.FIXNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerSub),
+        [JNumType.BIGNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerSub),
+        [JNumType.RATIONAL]: makeTypedBinaryOp(JNumType.RATIONAL, rationalSub),
+        [JNumType.REAL]: makeTypedBinaryOp(JNumType.REAL, realSub),
+        [JNumType.COMPLEX]: makeTypedBinaryOp(JNumType.COMPLEX, complexSub),
+    },
+    [Operation.mul]: {
+        [JNumType.FIXNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerMul),
+        [JNumType.BIGNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerMul),
+        [JNumType.RATIONAL]: makeTypedBinaryOp(JNumType.RATIONAL, rationalMul),
+    },
+    [Operation.div]: {
+        [JNumType.FIXNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerDiv),
+        [JNumType.BIGNUM]: makeTypedBinaryOp(JNumType.BIGNUM, integerDiv),
+        [JNumType.RATIONAL]: makeTypedBinaryOp(JNumType.RATIONAL, rationalDiv),
+    },
+    [Operation.pow]: {},
+    [Operation.lt]: {},
+    [Operation.lte]: {},
+    [Operation.gt]: {},
+    [Operation.gte]: {},
+    [Operation.eq]: {},
+};
+
+function makeBinaryOp(op: Operation) {
+    return (lhs: _JNum, rhs: _JNum): _JNum => {
+        const { type } = getUnifiedJNumTypes(lhs, rhs);
+
+        const l = lhs.promoteTo(type) as JNumByType[typeof type];
+        const r = rhs.promoteTo(type) as JNumByType[typeof type];
+
+        const kernel = OPERATION_TABLE[op][type] as BinaryKernel<typeof type, _JNum>;
+        if (!kernel) throw new Error(`${Operation[op]} not defined for ${JNumType[type]}`);
+
+        return kernel(l, r).normalize().demote();
+    }
+}
+
 /* =================== Utilities ======================== */
 
 function has<T extends PropertyKey>(obj: object, key: T): obj is object & Record<T, unknown> {
@@ -491,15 +724,18 @@ function has<T extends PropertyKey>(obj: object, key: T): obj is object & Record
 
 type JNumIntegerConstructor =
     | number
+    | IntegerNum
     | bigint;
 
 type JNumRealConstructor =
     | number
+    | RealNum
     | bigint;
 
 type JNumConstructor =
     | number
     | bigint
+    | _JNum
     | { real: JNumRealConstructor, imag: JNumRealConstructor }
     | { num: JNumIntegerConstructor, den: JNumIntegerConstructor };
 
@@ -515,8 +751,11 @@ export const JNum = (function () {
     }
 
     function constructJNumFromObject(num: JNumConstructor & object, exact: boolean): _JNum {
+        if (num instanceof _JNum)
+            return num;
+
         if (has(num, "real") && has(num, "imag")) {
-            return ComplexNum.create(JNum(num.real, exact), JNum(num.imag, exact))
+            return ComplexNum.create(JNum(num.real, exact), JNum(num.imag, exact));
         }
 
         if (has(num, "num") && has(num, "den")) {
@@ -555,6 +794,11 @@ export const JNum = (function () {
 
         throw new Error("Unknown JNum subclass in isZero");
     }
+
+    JNum.add = makeBinaryOp(Operation.add);
+    JNum.sub = makeBinaryOp(Operation.sub);
+    JNum.mul = makeBinaryOp(Operation.mul);
+    JNum.div = makeBinaryOp(Operation.div);
 
     return JNum;
 })();

@@ -15,6 +15,22 @@ describe("malformed input handling (constructor throws)", () => {
             expect(() => JNum({ num: 1, den: 0 } as any)).toThrow();
         });
 
+        test("rational numerator", () => {
+            expect(() => JNum({ num: { num: 1, den: 2 }, den: 1 } as any)).toThrow();
+        });
+
+        test("demoting rational numerator", () => {
+            expect(() => JNum({ num: { num: 2, den: 2 }, den: 1 } as any)).not.toThrow();
+        });
+
+        test("rational denominator", () => {
+            expect(() => JNum({ num: 0, den: { num: 1, den: 2 } } as any)).toThrow();
+        });
+
+        test("demoting rational denominator", () => {
+            expect(() => JNum({ num: 0, den: { num: 2, den: 2 } } as any)).not.toThrow();
+        });
+
         test("NaN denominator", () => {
             expect(() => JNum({ num: 1, den: NaN } as any)).toThrow();
         });
