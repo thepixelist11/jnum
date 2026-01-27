@@ -842,6 +842,8 @@
 export { FixNum } from "numerics/fixnum";
 export { BigNum } from "numerics/bignum";
 export { RationalNum } from "numerics/rational";
+export { NaNNum } from "numerics/nan";
+export { InfinityNum } from "numerics/infinity";
 export { dispatchBinaryOp } from "jnum-runtime";
 
 import "operators/arithmetic";

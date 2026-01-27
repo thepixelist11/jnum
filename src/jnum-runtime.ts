@@ -1,4 +1,6 @@
 import { _JNum, JNumType } from "jnum-base";
+import { NaNNum, NaNNumType } from "numerics/nan";
+import { InfinityNum, InfinityNumType } from "numerics/infinity";
 import { MinHeap } from "utils/min-heap";
 
 /* ============== TYPES ============== */
@@ -13,23 +15,23 @@ export interface RegisteredType {
 const TYPES = new Map<JNumType, RegisteredType>();
 
 export function registerType(t: RegisteredType): void {
-    if (TYPES.has(t.id)) {
-        console.warn(`Attempted to register type ${t.name ?? t.id.description} multiple times; skipping`);
-        return;
-    }
+    TYPES.set(t.id, t);
 
     invalidatePromotionCache();
     invalidateReachableCache();
 
-    TYPES.set(t.id, t);
+    ensureNaNKernelsForType(t.id);
+
+    if (t.id === NaNNumType) {
+        for (const other of TYPES.keys()) {
+            ensureNaNKernelsForType(other);
+        }
+    }
 }
 
 /* ============ OPERATIONS =========== */
 
-export type Operation =
-    | "add" | "sub" | "mul" | "div"
-    | "pow"
-    | "lt" | "lte" | "gt" | "gte" | "eq";
+export type Operation = string;
 
 export type BinaryOpKernel<LHS extends _JNum = _JNum, RHS extends _JNum = _JNum, R = _JNum> =
     (lhs: LHS, rhs: RHS) => R;
@@ -41,6 +43,18 @@ const BINARY_OPS = new Map<
 
 type ErasedBinaryOpKernel = (lhs: _JNum, rhs: _JNum) => unknown;
 
+function allOperations(): Iterable<Operation> {
+    return BINARY_OPS.keys();
+}
+
+function ensureNaNKernelsForType(t: JNumType): void {
+    if (t === NaNNumType) return;
+
+    for (const op of allOperations()) {
+        registerBinaryOpCommutative(op, NaNNumType, t, NaNNum.create);
+    }
+}
+
 export function registerBinaryOp<
     LHS extends _JNum,
     RHS extends _JNum,
@@ -51,6 +65,8 @@ export function registerBinaryOp<
     rhs: JNumType,
     kernel: BinaryOpKernel<LHS, RHS, R>
 ): void {
+    const is_new_op = !BINARY_OPS.has(op);
+
     let lhs_map = BINARY_OPS.get(op);
     if (!lhs_map) {
         lhs_map = new Map();
@@ -63,13 +79,33 @@ export function registerBinaryOp<
         lhs_map.set(lhs, rhs_map);
     }
 
-    if (rhs_map.has(rhs)) {
-        console.warn(`Binary op already registered for ${op} with ${lhs.description} and ${lhs.description}; skipping`);
-        return;
-    }
-
+    rhs_map.set(rhs, kernel as ErasedBinaryOpKernel);
     invalidateDispatchTable();
-    rhs_map.set(rhs, kernel as unknown as ErasedBinaryOpKernel);
+
+    if (is_new_op) {
+        registerBinaryOp(op, NaNNumType, NaNNumType, NaNNum.create);
+
+        for (const t of TYPES.keys()) {
+            if (t !== NaNNumType) {
+                registerBinaryOpCommutative(op, NaNNumType, t, NaNNum.create);
+            }
+        }
+    }
+}
+
+export function registerBinaryOpCommutative<
+    LHS extends _JNum,
+    RHS extends _JNum,
+    R
+>(
+    op: Operation,
+    lhs: JNumType,
+    rhs: JNumType,
+    kernel: BinaryOpKernel<LHS | RHS, RHS | LHS, R>
+) {
+    registerBinaryOp<LHS, RHS, R>(op, lhs, rhs, kernel);
+    if (lhs !== rhs)
+        registerBinaryOp<RHS, LHS, R>(op, rhs, lhs, kernel);
 }
 
 export function getBinaryOp(
@@ -202,7 +238,7 @@ function invalidateDispatchTable(): void {
 }
 
 export function precomputeAllDispatchPlans(): void {
-    for (const op of BINARY_OPS.keys()) {
+    for (const op of allOperations()) {
         for (const lhs of TYPES.keys()) {
             for (const rhs of TYPES.keys()) {
                 let lhs_map = DISPATCH_CACHE.get(op);
@@ -360,3 +396,19 @@ function reachableTypes(from: JNumType): JNumType[] {
         precomputeReachableTypes();
     return PRECOMPUTED_REACHABLE_CACHE.get(from) ?? [];
 }
+
+/* ====== Registering Specials ======= */
+
+registerType({
+    id: NaNNumType,
+    name: "NaNNum",
+    exact: false,
+    integer: false,
+});
+
+registerType({
+    id: InfinityNumType,
+    name: "InfinityNum",
+    exact: false,
+    integer: false,
+});
