@@ -1,0 +1,362 @@
+import { _JNum, JNumType } from "jnum-base";
+import { MinHeap } from "utils/min-heap";
+
+/* ============== TYPES ============== */
+
+export interface RegisteredType {
+    id: JNumType;
+    name?: string;
+    exact?: boolean;
+    integer?: boolean;
+};
+
+const TYPES = new Map<JNumType, RegisteredType>();
+
+export function registerType(t: RegisteredType): void {
+    if (TYPES.has(t.id)) {
+        console.warn(`Attempted to register type ${t.name ?? t.id.description} multiple times; skipping`);
+        return;
+    }
+
+    invalidatePromotionCache();
+    invalidateReachableCache();
+
+    TYPES.set(t.id, t);
+}
+
+/* ============ OPERATIONS =========== */
+
+export type Operation =
+    | "add" | "sub" | "mul" | "div"
+    | "pow"
+    | "lt" | "lte" | "gt" | "gte" | "eq";
+
+export type BinaryOpKernel<LHS extends _JNum = _JNum, RHS extends _JNum = _JNum, R = _JNum> =
+    (lhs: LHS, rhs: RHS) => R;
+
+const BINARY_OPS = new Map<
+    Operation,
+    Map<JNumType, Map<JNumType, ErasedBinaryOpKernel>>
+>();
+
+type ErasedBinaryOpKernel = (lhs: _JNum, rhs: _JNum) => unknown;
+
+export function registerBinaryOp<
+    LHS extends _JNum,
+    RHS extends _JNum,
+    R,
+>(
+    op: Operation,
+    lhs: JNumType,
+    rhs: JNumType,
+    kernel: BinaryOpKernel<LHS, RHS, R>
+): void {
+    let lhs_map = BINARY_OPS.get(op);
+    if (!lhs_map) {
+        lhs_map = new Map();
+        BINARY_OPS.set(op, lhs_map);
+    }
+
+    let rhs_map = lhs_map.get(lhs);
+    if (!rhs_map) {
+        rhs_map = new Map();
+        lhs_map.set(lhs, rhs_map);
+    }
+
+    if (rhs_map.has(rhs)) {
+        console.warn(`Binary op already registered for ${op} with ${lhs.description} and ${lhs.description}; skipping`);
+        return;
+    }
+
+    invalidateDispatchTable();
+    rhs_map.set(rhs, kernel as unknown as ErasedBinaryOpKernel);
+}
+
+export function getBinaryOp(
+    op: Operation,
+    lhs: JNumType,
+    rhs: JNumType
+): ErasedBinaryOpKernel | null {
+    return BINARY_OPS.get(op)?.get(lhs)?.get(rhs) ?? null;
+}
+
+interface DispatchPlan {
+    kernel: ErasedBinaryOpKernel;
+    lhs_fn: (v: _JNum) => _JNum;
+    rhs_fn: (v: _JNum) => _JNum;
+    lhs_target: JNumType;
+    rhs_target: JNumType;
+};
+
+function promotionCostAndPath(
+    from: JNumType,
+    to: JNumType
+): { cost: number; path: PromotionRule[] } | null {
+    if (from === to) return { cost: 0, path: [] };
+    const inner = PRECOMPUTED_PROMOTION_PATHS.get(from);
+    const pc = inner?.get(to) ?? null;
+    return pc;
+}
+
+function resolveDispatchPlan(
+    op: Operation,
+    lhs_type: JNumType,
+    rhs_type: JNumType,
+): DispatchPlan | null {
+    let best: {
+        cost: number;
+        kernel: ErasedBinaryOpKernel;
+        lhs_path: PromotionRule[];
+        rhs_path: PromotionRule[];
+        lhs_target: JNumType;
+        rhs_target: JNumType;
+    } | null = null;
+
+    if (!__promotion_paths_precomputed)
+        precomputePromotionPaths();
+
+    const lhs_targets = reachableTypes(lhs_type);
+    const rhs_targets = reachableTypes(rhs_type);
+
+    for (const lt of lhs_targets) {
+        const lhs_pc = promotionCostAndPath(lhs_type, lt);
+        if (!lhs_pc) continue;
+
+        for (const rt of rhs_targets) {
+            const rhs_pc = promotionCostAndPath(rhs_type, rt);
+            if (!rhs_pc) continue;
+
+            const kernel = getBinaryOp(op, lt, rt);
+            if (!kernel) continue;
+
+            const total_cost = lhs_pc.cost + rhs_pc.cost;
+
+            if (!best || total_cost < best.cost) {
+                best = {
+                    cost: total_cost,
+                    kernel,
+                    lhs_path: lhs_pc.path,
+                    rhs_path: rhs_pc.path,
+                    lhs_target: lt,
+                    rhs_target: rt,
+                };
+            }
+        }
+    }
+
+    if (!best) return null;
+
+    function composePromotion(rules: PromotionRule[]): (v: _JNum) => _JNum {
+        if (!rules.length) return v => v;
+        return v => rules.reduce((acc, r) => r.apply(acc), v);
+    }
+
+    const lhs_promo_fn = composePromotion(best.lhs_path);
+    const rhs_promo_fn = composePromotion(best.rhs_path);
+
+    return {
+        kernel: best.kernel,
+        lhs_fn: lhs_promo_fn,
+        rhs_fn: rhs_promo_fn,
+        lhs_target: best.lhs_target,
+        rhs_target: best.rhs_target,
+    };
+}
+
+const DISPATCH_CACHE = new Map<
+    Operation,
+    Map<JNumType, Map<JNumType, DispatchPlan>>
+>();
+
+export function dispatchBinaryOp<R = _JNum>(
+    op: Operation,
+    lhs: _JNum,
+    rhs: _JNum,
+): R {
+    let lhs_map = DISPATCH_CACHE.get(op);
+    if (!lhs_map) {
+        lhs_map = new Map();
+        DISPATCH_CACHE.set(op, lhs_map);
+    }
+
+    let rhs_map = lhs_map.get(lhs.type);
+    if (!rhs_map) {
+        rhs_map = new Map();
+        lhs_map.set(lhs.type, rhs_map);
+    }
+
+    let plan: DispatchPlan | null = rhs_map.get(rhs.type) ?? null;
+    if (!plan) {
+        plan = resolveDispatchPlan(op, lhs.type, rhs.type);
+        if (!plan)
+            throw new Error(`Operation ${op} not defined for ${lhs.type.description} and ${rhs.type.description}`);
+
+        rhs_map.set(rhs.type, plan);
+    }
+
+    return plan.kernel(plan.lhs_fn(lhs), plan.rhs_fn(rhs)) as R;
+}
+
+function invalidateDispatchTable(): void {
+    DISPATCH_CACHE.clear();
+}
+
+export function precomputeAllDispatchPlans(): void {
+    for (const op of BINARY_OPS.keys()) {
+        for (const lhs of TYPES.keys()) {
+            for (const rhs of TYPES.keys()) {
+                let lhs_map = DISPATCH_CACHE.get(op);
+                if (!lhs_map) {
+                    lhs_map = new Map();
+                    DISPATCH_CACHE.set(op, lhs_map);
+                }
+
+                let rhs_map = lhs_map.get(lhs);
+                if (!rhs_map) {
+                    rhs_map = new Map();
+                    lhs_map.set(lhs, rhs_map);
+                }
+
+                if (!rhs_map.has(rhs)) {
+                    const plan = resolveDispatchPlan(op, lhs, rhs);
+                    if (plan) rhs_map.set(rhs, plan);
+                }
+            }
+        }
+    }
+}
+
+/* ============ PROMOTIONS =========== */
+
+export interface PromotionRule {
+    from: JNumType;
+    to: JNumType;
+    cost: number;
+    apply(v: _JNum): _JNum;
+};
+
+const PROMOTIONS: PromotionRule[] = [];
+
+export function registerPromotion(rule: PromotionRule): void {
+    if (rule.cost < 1)
+        throw new Error("Attempted to register a promotion rule with non-positive cost; zero or negative cost rules may cause cycles in promotion path lookups");
+    PROMOTIONS.push(rule);
+
+    invalidateDispatchTable();
+    invalidatePromotionCache();
+    invalidateReachableCache();
+}
+
+function findPromotionPath(
+    from: JNumType,
+    to: JNumType,
+): PromotionRule[] | null {
+    const dist = new Map<JNumType, number>();
+    const prev = new Map<JNumType, PromotionRule | null>();
+    const heap = new MinHeap<JNumType>();
+
+    dist.set(from, 0);
+    prev.set(from, null);
+    heap.insert(from, 0);
+
+    while (heap.size > 0) {
+        const cur = heap.extractMin()!;
+        if (cur === to) break;
+
+        for (const rule of PROMOTIONS) {
+            if (rule.from !== cur) continue;
+
+            const next = rule.to;
+            const alt = dist.get(cur)! + rule.cost;
+
+            if (!dist.has(next) || alt < dist.get(next)!) {
+                dist.set(next, alt);
+                prev.set(next, rule);
+                heap.insert(next, alt);
+            }
+        }
+    }
+
+    if (!dist.has(to)) return null;
+
+    const path: PromotionRule[] = [];
+    let cur: JNumType = to;
+
+    while (prev.get(cur)) {
+        const rule = prev.get(cur)!;
+        path.unshift(rule);
+        cur = rule.from;
+    }
+
+    return path;
+}
+
+export function promoteValue(v: _JNum, target: JNumType): _JNum {
+    if (v.type === target) return v;
+
+    const path = findPromotionPath(v.type, target);
+    if (!path)
+        throw new Error(`No promotion path from ${v.type.description} to ${target.description}`);
+
+    let out = v;
+    for (const rule of path)
+        out = rule.apply(out);
+
+    return out;
+}
+
+const PRECOMPUTED_PROMOTION_PATHS = new Map<JNumType, Map<JNumType, { cost: number, path: PromotionRule[] }>>();
+const PRECOMPUTED_REACHABLE_CACHE = new Map<JNumType, JNumType[]>();
+
+let __promotion_paths_precomputed = false;
+let __reachable_paths_precomputed = false;
+
+function invalidatePromotionCache() {
+    PRECOMPUTED_PROMOTION_PATHS.clear();
+    __promotion_paths_precomputed = false;
+}
+
+function invalidateReachableCache(): void {
+    PRECOMPUTED_REACHABLE_CACHE.clear();
+    __reachable_paths_precomputed = false;
+}
+
+export function precomputeReachableTypes() {
+    for (const t of TYPES.keys()) {
+        const seen = new Set<JNumType>();
+        const stack = [t];
+        while (stack.length) {
+            const cur = stack.pop()!;
+            if (seen.has(cur)) continue;
+            seen.add(cur);
+            for (const r of PROMOTIONS)
+                if (r.from === cur)
+                    stack.push(r.to);
+        }
+        PRECOMPUTED_REACHABLE_CACHE.set(t, [...seen]);
+    }
+    __reachable_paths_precomputed = true;
+}
+
+export function precomputePromotionPaths() {
+    invalidatePromotionCache();
+    for (const from of TYPES.keys()) {
+        const inner = new Map<JNumType, { cost: number; path: PromotionRule[] }>();
+        for (const to of TYPES.keys()) {
+            const path = findPromotionPath(from, to);
+            if (path) {
+                const cost = path.reduce((s, r) => s + r.cost, 0);
+                inner.set(to, { cost, path });
+            }
+        }
+        PRECOMPUTED_PROMOTION_PATHS.set(from, inner);
+    }
+
+    __promotion_paths_precomputed = true;
+}
+
+function reachableTypes(from: JNumType): JNumType[] {
+    if (!__reachable_paths_precomputed)
+        precomputeReachableTypes();
+    return PRECOMPUTED_REACHABLE_CACHE.get(from) ?? [];
+}
