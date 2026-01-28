@@ -2,16 +2,22 @@ import {
     PrimitiveHint,
     _JNum,
     IntegerLike,
-    ExactLike
+    ExactLike,
 } from "jnum-base";
 
 import {
     registerType,
     registerPromotion,
+    JNum,
+    promoteValue,
+    registerJNumConstructor,
 } from "jnum-runtime";
 
 import { FixNum, FixNumType } from "numerics/fixnum";
 import { BigNum, BigNumType } from "numerics/bignum";
+import { InfinityNum } from "numerics/infinity";
+import { NaNNum } from "numerics/nan";
+import { has } from "utils/utils";
 
 export const RationalNumType = Symbol("RationalNum");
 
@@ -50,16 +56,22 @@ export class RationalNum extends ExactLike {
             return BigNum.create(nn);
 
         return new RationalNum(
-            BigNum.create(nn),
-            BigNum.create(dd),
+            BigNum.create(nn) as IntegerLike,
+            BigNum.create(dd) as IntegerLike,
         )
     }
 
     public static createFromDecimal(x: number | bigint) {
         if (typeof x === "bigint") return BigNum.create(x);
 
-        // if (Number.isNaN(x)) return InexactRealNum.create(NaN);
-        // if (!Number.isFinite(x)) return InexactRealNum.create(Infinity);
+        if (Number.isNaN(x))
+            return NaNNum.create();
+
+        if (x === Infinity)
+            return InfinityNum.pos();
+
+        if (x === -Infinity)
+            return InfinityNum.neg();
 
         const s = x.toString();
 
@@ -72,8 +84,8 @@ export class RationalNum extends ExactLike {
         const num = BigInt(int_part) * scale + BigInt(frac_part);
 
         return RationalNum.create(
-            BigNum.create(num),
-            BigNum.create(scale),
+            BigNum.create(num) as IntegerLike,
+            BigNum.create(scale) as IntegerLike,
         );
     }
 
@@ -145,8 +157,8 @@ registerPromotion({
             throw new Error("Expected a BigNum");
 
         return RationalNum.create(
-            BigNum.create(v.toBigInt()),
-            BigNum.create(1n),
+            BigNum.create(v.toBigInt()) as IntegerLike,
+            BigNum.create(1n) as IntegerLike,
             false,
         );
     }
@@ -161,10 +173,56 @@ registerPromotion({
             throw new Error("Expected a FixNum");
 
         return RationalNum.create(
-            BigNum.create(v.toBigInt()),
-            BigNum.create(1n),
+            BigNum.create(v.toBigInt()) as IntegerLike,
+            BigNum.create(1n) as IntegerLike,
             false,
         );
     }
 });
 
+/* ============ CONSTRUCTOR ========== */
+
+registerJNumConstructor({
+    precedence: 10,
+    predicate: (x): x is number => typeof x === "number" && !Number.isInteger(x),
+    id: Symbol("RationalNum:Number"),
+    constructor: (x: number) => RationalNum.createFromDecimal(x)
+});
+
+registerJNumConstructor({
+    precedence: 10,
+    predicate: (x): x is string => typeof x === "string" && !Number.isInteger(parseFloat(x)),
+    id: Symbol("RationalNum:StringDec"),
+    constructor: (x: string) => RationalNum.createFromDecimal(parseFloat(x))
+});
+
+registerJNumConstructor({
+    precedence: 10,
+    predicate: (x): x is string => typeof x === "string" && /^[\d.]+\/[\d.]+$/.test(x),
+    id: Symbol("RationalNum:StringFrac"),
+    constructor: (x: string) => {
+        const [num, den] = /^([\d.])+\/([\d.])+$/.exec(x)!.slice(1);
+        const nnum = parseFloat(num);
+        const nden = parseFloat(den);
+        return RationalNum.create(
+            BigNum.create(nnum) as IntegerLike,
+            BigNum.create(nden) as IntegerLike,
+        )
+    }
+});
+
+registerJNumConstructor({
+    precedence: 10,
+    predicate: (x): x is { num: unknown, den: unknown } =>
+        x !== null &&
+        typeof x === "object" &&
+        has(x, "num") &&
+        has(x, "den"),
+    id: Symbol("RationalNum:ObjFrac"),
+    constructor: (x: { num: unknown, den: unknown }) => {
+        return RationalNum.create(
+            promoteValue(JNum(x.num), BigNumType) as IntegerLike,
+            promoteValue(JNum(x.den), BigNumType) as IntegerLike,
+        )
+    }
+});

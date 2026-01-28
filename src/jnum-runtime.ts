@@ -2,6 +2,7 @@ import { _JNum, JNumType } from "jnum-base";
 import { NaNNum, NaNNumType } from "numerics/nan";
 import { InfinityNum, InfinityNumType } from "numerics/infinity";
 import { MinHeap } from "utils/min-heap";
+import { OrderedMap } from "utils/ordered-map";
 
 /* ============== TYPES ============== */
 
@@ -43,7 +44,7 @@ const BINARY_OPS = new Map<
 
 type ErasedBinaryOpKernel = (lhs: _JNum, rhs: _JNum) => unknown;
 
-function allOperations(): Iterable<Operation> {
+export function allOperations(): Iterable<Operation> {
     return BINARY_OPS.keys();
 }
 
@@ -235,6 +236,7 @@ export function dispatchBinaryOp<R = _JNum>(
 
 function invalidateDispatchTable(): void {
     DISPATCH_CACHE.clear();
+    __update_JNum_registered_op_keys();
 }
 
 export function precomputeAllDispatchPlans(): void {
@@ -412,3 +414,51 @@ registerType({
     exact: false,
     integer: false,
 });
+
+/* ================ JNum Constructors =================== */
+
+type TypePredicate<T> = (x: unknown) => x is T;
+type GuardedType<Pred> = Pred extends (x: unknown) => x is infer U ? U : never;
+type GuardedTypeFn<Pred> = (x: GuardedType<Pred>) => _JNum;
+export interface JNumConstructor<T, Pred extends TypePredicate<T>> {
+    predicate: Pred;
+    precedence: number;
+    id: symbol;
+    constructor: GuardedTypeFn<Pred>;
+};
+
+const JNUM_CONSTRUCTORS = new OrderedMap<JNumConstructor<unknown, TypePredicate<unknown>>>();
+export function registerJNumConstructor<T>(constructor: JNumConstructor<T, TypePredicate<T>>) {
+    JNUM_CONSTRUCTORS.insert(constructor.precedence, constructor, constructor.id);
+}
+
+export function getJNumConstructors() {
+    return [...JNUM_CONSTRUCTORS];
+}
+
+type JNumOp = (a: _JNum, b: _JNum) => unknown;
+type JNumWithOps = { [key: string]: JNumOp };
+
+let __update_JNum_registered_op_keys: () => void = () => { };
+export const JNum = (function () {
+    function JNum(x: unknown): _JNum {
+        for (const cstr of getJNumConstructors()) {
+            if (!cstr.predicate(x)) continue;
+            return cstr.constructor(x);
+        }
+
+        throw new Error(`Invalid JNum constructor of type ${typeof x}`);
+    }
+
+    (__update_JNum_registered_op_keys = () => {
+        for (const op of allOperations())
+            (JNum as unknown as JNumWithOps)[op] ??=
+                (a: _JNum, b: _JNum) => dispatchBinaryOp(op, a, b);
+    })();
+
+    return JNum;
+})();
+
+// TODO: Store multiple kernels rather than a single one, each optionally
+// containing a predicate and precedence, with the one lacking a pred acting as
+// the default case.

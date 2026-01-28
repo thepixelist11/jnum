@@ -1,3 +1,5 @@
+import { OrderedMap } from "utils/ordered-map";
+
 export type PrimitiveHint = "string" | "number" | "default";
 
 export type JNumType = symbol;
@@ -26,3 +28,5 @@ export abstract class ExactLike extends _JNum {
 export abstract class IntegerLike extends ExactLike {
     public abstract toBigInt(): bigint;
 }
+
+export abstract class RealLike extends _JNum { }

@@ -18,4 +18,6 @@ export declare abstract class ExactLike extends _JNum {
 export declare abstract class IntegerLike extends ExactLike {
     abstract toBigInt(): bigint;
 }
+export declare abstract class RealLike extends _JNum {
+}
 //# sourceMappingURL=jnum-base.d.ts.map

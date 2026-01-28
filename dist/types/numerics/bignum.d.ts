@@ -4,7 +4,7 @@ export declare class BigNum extends IntegerLike {
     readonly type: symbol;
     private readonly value;
     private constructor();
-    static create(value: bigint | number): BigNum;
+    static create(value: bigint | number): _JNum;
     isExact(): boolean;
     isFinite(): boolean;
     isNaN(): boolean;

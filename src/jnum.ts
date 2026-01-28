@@ -756,95 +756,16 @@
 //     return Object.hasOwn(obj, key);
 // }
 //
-// /* ==================== Exports ========================= */
-//
-// type JNumIntegerConstructor =
-//     | number
-//     | IntegerNum
-//     | bigint;
-//
-// type JNumRealConstructor =
-//     | number
-//     | RealNum
-//     | bigint;
-//
-// type JNumConstructor =
-//     | number
-//     | bigint
-//     | _JNum
-//     | { real: JNumRealConstructor, imag: JNumRealConstructor }
-//     | { num: JNumIntegerConstructor, den: JNumIntegerConstructor };
-//
-// export const JNum = (function () {
-//     function __constructJNumFromNumber(num: number | bigint, exact: boolean): _JNum {
-//         if ((exact && Number.isInteger(num)) || typeof num === "bigint")
-//             return BigNum.create(num);
-//
-//         if (exact)
-//             return RationalNum.createFromDecimal(num);
-//
-//         return InexactRealNum.create(num);
-//     }
-//
-//     function __constructJNumFromObject(num: JNumConstructor & object, exact: boolean): _JNum {
-//         if (num instanceof _JNum)
-//             return num;
-//
-//         if (has(num, "real") && has(num, "imag")) {
-//             return ComplexNum.create(JNum(num.real, exact), JNum(num.imag, exact));
-//         }
-//
-//         if (has(num, "num") && has(num, "den")) {
-//             const n = JNum(num.num, exact).demote();
-//             const d = JNum(num.den, exact).demote();
-//
-//             if (!(n instanceof IntegerNum))
-//                 throw new Error("Cannot construct a RationalNum with non-integer numerator");
-//
-//             if (!(d instanceof IntegerNum))
-//                 throw new Error("Cannot construct a RationalNum with non-integer denominator");
-//
-//             return RationalNum.create(n, d);
-//         }
-//
-//         throw new Error("Unknown object-based JNum constructor type");
-//     }
-//
-//     function JNum(num: JNumConstructor, exact = true): _JNum {
-//         if (typeof num === "number" || typeof num === "bigint")
-//             return __constructJNumFromNumber(num, exact);
-//
-//         if (typeof num === "object")
-//             return __constructJNumFromObject(num, exact);
-//
-//         throw new Error(`Invalid JNum constructor of type ${typeof num}`);
-//     }
-//
-//     JNum.isZero = (num: _JNum): boolean => {
-//         if (num instanceof FixNum) return num.raw === 0;
-//         if (num instanceof BigNum) return num.raw === 0n;
-//         if (num instanceof RationalNum) return num.numerator.toBigInt() === 0n;
-//         if (num instanceof InexactRealNum) return num.raw === 0;
-//         if (num instanceof ExactRealNum) return JNum.isZero(num.value);
-//         if (num instanceof ComplexNum) return JNum.isZero(num.real) && JNum.isZero(num.imag);
-//
-//         throw new Error("Unknown JNum subclass in isZero");
-//     }
-//
-//     JNum.add = makeBinaryOp("add");
-//     JNum.sub = makeBinaryOp("sub");
-//     JNum.mul = makeBinaryOp("mul");
-//     JNum.div = makeBinaryOp("div");
-//
-//     return JNum;
-// })();
+
+/* ==================== Exports ========================= */
 
 export { FixNum } from "numerics/fixnum";
 export { BigNum } from "numerics/bignum";
 export { RationalNum } from "numerics/rational";
+export { InexactRealNum } from "numerics/inexactreal";
 export { NaNNum } from "numerics/nan";
 export { InfinityNum } from "numerics/infinity";
-export { dispatchBinaryOp } from "jnum-runtime";
+export { JNum } from "jnum-runtime"
 
 import "operators/arithmetic";
 import "operators/predicates";

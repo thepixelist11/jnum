@@ -1,14 +1,17 @@
 import {
     PrimitiveHint,
     _JNum,
-    IntegerLike
+    IntegerLike,
 } from "jnum-base";
 
 import {
     registerType,
     registerPromotion,
+    registerJNumConstructor,
 } from "jnum-runtime";
 
+import { NaNNum } from "numerics/nan";
+import { InfinityNum } from "numerics/infinity";
 import { FixNum, FixNumType } from "numerics/fixnum";
 
 export const BigNumType = Symbol("BigNum");
@@ -23,16 +26,25 @@ export class BigNum extends IntegerLike {
         this.value = value;
     }
 
-    public static create(value: bigint | number): BigNum {
-        if (typeof value === "number")
-            value = BigInt(Math.trunc(value));
+    public static create(value: bigint | number): _JNum {
+        if (Number.isNaN(value))
+            return NaNNum.create();
 
-        return new BigNum(value);
+        if (value === Infinity)
+            return InfinityNum.pos();
+
+        if (value === -Infinity)
+            return InfinityNum.neg();
+
+        if (typeof value === "number" && !Number.isInteger(value))
+            throw new Error("Expected an integer for BigNum");
+
+        return new BigNum(BigInt(value));
     }
 
     public override isExact(): boolean { return true; }
     public override isFinite(): boolean { return true; }
-    public override isNaN(): boolean { return Number.isNaN(this.value); }
+    public override isNaN(): boolean { return false; }
 
     public override normalize(): _JNum { return this; }
     public override canDemote(): boolean {
@@ -44,7 +56,7 @@ export class BigNum extends IntegerLike {
             : this;
     }
 
-    public override toBigInt(): bigint { return BigInt(this.value); }
+    public override toBigInt(): bigint { return this.value; }
 
     public get raw(): bigint { return this.value; }
 
@@ -77,3 +89,25 @@ registerPromotion({
     }
 });
 
+/* ============ CONSTRUCTOR ========== */
+
+registerJNumConstructor({
+    precedence: 10,
+    predicate: (x): x is number => typeof x === "number" && Number.isInteger(x),
+    id: Symbol("BigNum:Number"),
+    constructor: (x: number) => BigNum.create(BigInt(x))
+});
+
+registerJNumConstructor({
+    precedence: 10,
+    predicate: (x): x is bigint => typeof x === "bigint",
+    id: Symbol("BigNum:BigInt"),
+    constructor: (x: bigint) => BigNum.create(x)
+});
+
+registerJNumConstructor({
+    precedence: 10,
+    predicate: (x): x is string => typeof x === "string" && Number.isInteger(parseFloat(x)),
+    id: Symbol("BigNum:String"),
+    constructor: (x) => BigNum.create(BigInt(parseInt(x)))
+});
