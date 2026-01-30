@@ -118,10 +118,10 @@ registerJNumConstructor({
     precedence: 15,
     predicate: (x): x is string =>
         typeof x === "string" &&
-        /^[\d.]+[+-][\d.]+i$/.test(x),
+        /^[+-]?[\d.]+[+-][\d.]+i$/.test(x),
     id: Symbol("ComplexNum:StringComplex"),
     constructor: (x: string) => {
-        const [real, imag] = /^([\d.])+([+-][\d.]+)i$/.exec(x)!.slice(1);
+        const [real, imag] = /^([+-]?[\d.]+)([+-][\d.]+)i$/.exec(x)!.slice(1);
         const nreal = Number(real);
         const nimag = Number(imag);
         return ComplexNum.create(

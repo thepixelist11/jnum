@@ -1,4 +1,4 @@
-import { JNum, registerBinaryOp, registerBinaryOpCommutative } from "jnum-runtime";
+import { JNum, reduceBinary, registerBinaryOp, registerBinaryOpCommutative, registerNAryOp, registerUnaryOp } from "jnum-runtime";
 import { NaNNum } from "numerics/nan";
 import { InfinityNum, InfinityNumType } from "numerics/infinity";
 import { ComplexNum, ComplexNumType } from "numerics/complex";
@@ -7,7 +7,7 @@ import { RationalNum, RationalNumType } from "numerics/rational";
 import { BigNum, BigNumType } from "numerics/bignum";
 import { FixNum, FixNumType } from "numerics/fixnum";
 import { ExactLike, IntegerLike, _JNum } from "jnum-base";
-import { OP_ADD, OP_DIV, OP_MUL, OP_SUB } from "operators/op_names";
+import { OP_ABS, OP_ADD, OP_DIV, OP_MUL, OP_NEG, OP_SUB } from "operators/op_names";
 
 /* =========== InfinityNum =========== */
 
@@ -154,6 +154,16 @@ registerBinaryOp<InexactRealNum, InfinityNum, _JNum>(
     OP_DIV, InexactRealNumType, InfinityNumType, infinityUnderRealDivision
 );
 
+// Unary Operations
+
+registerUnaryOp<InfinityNum, InfinityNum>(OP_NEG, InfinityNumType,
+    (a) => a.sign === 1 ? InfinityNum.neg() : InfinityNum.pos()
+);
+
+registerUnaryOp<InfinityNum, InfinityNum>(OP_ABS, InfinityNumType,
+    () => InfinityNum.pos()
+);
+
 /* ============ ComplexNum =========== */
 
 registerBinaryOp<ComplexNum, ComplexNum, _JNum>(
@@ -239,6 +249,14 @@ registerBinaryOp<InexactRealNum, InexactRealNum, _JNum>(
     }
 );
 
+registerUnaryOp<InexactRealNum, _JNum>(OP_NEG, InexactRealNumType,
+    (a) => InexactRealNum.create(-a.raw)
+);
+
+registerUnaryOp<InexactRealNum, _JNum>(OP_ABS, InexactRealNumType,
+    (a) => InexactRealNum.create(Math.abs(a.raw))
+);
+
 /* =========== RationalNum =========== */
 
 registerBinaryOp<RationalNum, RationalNum, _JNum>(
@@ -303,6 +321,24 @@ registerBinaryOp<RationalNum, RationalNum, RationalNum>(
     }
 );
 
+registerUnaryOp<RationalNum, RationalNum>(OP_NEG, RationalNumType,
+    (a) => RationalNum.create(
+        BigNum.create(-a.num.toBigInt()) as IntegerLike,
+        BigNum.create(-a.den.toBigInt()) as IntegerLike,
+    ) as RationalNum
+);
+
+registerUnaryOp<RationalNum, RationalNum>(OP_ABS, RationalNumType,
+    (a) => {
+        const num = a.num.toBigInt();
+        const den = a.den.toBigInt();
+        return RationalNum.create(
+            BigNum.create(num >= 0 ? num : -num) as IntegerLike,
+            BigNum.create(den > 0 ? den : -den) as IntegerLike,
+        ) as RationalNum
+    }
+);
+
 /* ============== BigNum ============= */
 
 function binaryOpSafe(op: (a: bigint, b: bigint) => bigint) {
@@ -327,6 +363,14 @@ registerBinaryOp<BigNum, BigNum, ExactLike>(OP_DIV, BigNumType, BigNumType,
     (a, b) => {
         return RationalNum.create(a, b);
     }
+);
+
+registerUnaryOp<BigNum, ExactLike>(OP_NEG, BigNumType,
+    (a) => BigNum.create(-a.raw)
+);
+
+registerUnaryOp<BigNum, ExactLike>(OP_ABS, BigNumType,
+    (a) => BigNum.create(a.raw > 0 ? a.raw : -a.raw)
 );
 
 /* ============== FixNum ============= */
@@ -370,3 +414,10 @@ registerBinaryOp<FixNum, FixNum, ExactLike>(OP_DIV, FixNumType, FixNumType,
     }
 );
 
+registerUnaryOp<FixNum, ExactLike>(OP_NEG, FixNumType,
+    (a) => FixNum.create(-a.raw)
+);
+
+registerUnaryOp<FixNum, ExactLike>(OP_ABS, FixNumType,
+    (a) => FixNum.create(Math.abs(a.raw))
+);

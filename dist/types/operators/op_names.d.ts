@@ -8,4 +8,6 @@ export declare const OP_ADD: "add";
 export declare const OP_MUL: "mul";
 export declare const OP_SUB: "sub";
 export declare const OP_DIV: "div";
+export declare const OP_NEG: "neg";
+export declare const OP_ABS: "abs";
 //# sourceMappingURL=op_names.d.ts.map

@@ -12,3 +12,5 @@ export const OP_MUL = "mul" as const;
 export const OP_SUB = "sub" as const;
 export const OP_DIV = "div" as const;
 
+export const OP_NEG = "neg" as const;
+export const OP_ABS = "abs" as const;
