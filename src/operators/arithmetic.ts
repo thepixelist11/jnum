@@ -1,18 +1,13 @@
-import { registerBinaryOp, registerBinaryOpCommutative } from "jnum-runtime";
+import { JNum, registerBinaryOp, registerBinaryOpCommutative } from "jnum-runtime";
 import { NaNNum } from "numerics/nan";
 import { InfinityNum, InfinityNumType } from "numerics/infinity";
+import { ComplexNum, ComplexNumType } from "numerics/complex";
 import { InexactRealNum, InexactRealNumType } from "numerics/inexactreal";
 import { RationalNum, RationalNumType } from "numerics/rational";
 import { BigNum, BigNumType } from "numerics/bignum";
 import { FixNum, FixNumType } from "numerics/fixnum";
 import { ExactLike, IntegerLike, _JNum } from "jnum-base";
-
-/* ========= Operation Names ========= */
-
-export const OP_ADD = "add" as const;
-export const OP_MUL = "mul" as const;
-export const OP_SUB = "sub" as const;
-export const OP_DIV = "div" as const;
+import { OP_ADD, OP_DIV, OP_MUL, OP_SUB } from "operators/op_names";
 
 /* =========== InfinityNum =========== */
 
@@ -105,6 +100,10 @@ registerBinaryOpCommutative<InfinityNum, InexactRealNum, _JNum>(
     OP_MUL, InfinityNumType, InexactRealNumType, infinityRealMultiplication
 );
 
+registerBinaryOpCommutative<InfinityNum, InexactRealNum, _JNum>(
+    OP_MUL, InfinityNumType, ComplexNumType, infinityRealMultiplication
+);
+
 // Division
 
 registerBinaryOp<InfinityNum, InfinityNum, NaNNum>(
@@ -153,6 +152,69 @@ registerBinaryOp<RationalNum, InfinityNum, _JNum>(
 
 registerBinaryOp<InexactRealNum, InfinityNum, _JNum>(
     OP_DIV, InexactRealNumType, InfinityNumType, infinityUnderRealDivision
+);
+
+/* ============ ComplexNum =========== */
+
+registerBinaryOp<ComplexNum, ComplexNum, _JNum>(
+    OP_ADD, ComplexNumType, ComplexNumType, (a, b) => {
+        return ComplexNum.create(
+            JNum.add(a.real, b.real) as _JNum,
+            JNum.add(a.imag, b.imag) as _JNum,
+        );
+    }
+);
+
+registerBinaryOp<ComplexNum, ComplexNum, _JNum>(
+    OP_SUB, ComplexNumType, ComplexNumType, (a, b) => {
+        return ComplexNum.create(
+            JNum.sub(a.real, b.real) as _JNum,
+            JNum.sub(a.imag, b.imag) as _JNum,
+        );
+    }
+);
+
+registerBinaryOp<ComplexNum, ComplexNum, _JNum>(
+    OP_MUL, ComplexNumType, ComplexNumType, (a, b) => {
+        const re = JNum.sub(
+            JNum.mul(a.real, b.real) as _JNum,
+            JNum.mul(a.imag, b.imag) as _JNum
+        ) as _JNum;
+
+        const im = JNum.add(
+            JNum.mul(a.real, b.imag) as _JNum,
+            JNum.mul(a.imag, b.real) as _JNum
+        ) as _JNum;
+
+        return ComplexNum.create(re, im);
+    }
+);
+
+registerBinaryOp<ComplexNum, ComplexNum, _JNum>(
+    OP_DIV, ComplexNumType, ComplexNumType, (a, b) => {
+        const den = JNum.add(
+            JNum.mul(b.real, b.real) as _JNum,
+            JNum.mul(b.imag, b.imag) as _JNum,
+        ) as _JNum;
+
+        const re = JNum.div(
+            JNum.add(
+                JNum.mul(a.real, b.real) as _JNum,
+                JNum.mul(a.imag, b.imag) as _JNum,
+            ) as _JNum,
+            den
+        ) as _JNum;
+
+        const im = JNum.div(
+            JNum.sub(
+                JNum.mul(a.imag, b.real) as _JNum,
+                JNum.mul(a.real, b.imag) as _JNum,
+            ) as _JNum,
+            den
+        ) as _JNum;
+
+        return ComplexNum.create(re, im);
+    }
 );
 
 /* =========== InexactRealNum ======== */

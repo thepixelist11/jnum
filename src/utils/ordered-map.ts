@@ -1,4 +1,4 @@
-type Entry<T> = {
+interface Entry<T> {
     rank: number;
     value: T;
     id?: symbol;

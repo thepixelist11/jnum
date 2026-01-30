@@ -1,5 +1,3 @@
-import { OrderedMap } from "utils/ordered-map";
-
 export type PrimitiveHint = "string" | "number" | "default";
 
 export type JNumType = symbol;

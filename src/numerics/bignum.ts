@@ -91,23 +91,31 @@ registerPromotion({
 
 /* ============ CONSTRUCTOR ========== */
 
+// FIXME: Precision loss at 1e23
+
 registerJNumConstructor({
     precedence: 10,
-    predicate: (x): x is number => typeof x === "number" && Number.isInteger(x),
+    predicate: (x): x is number =>
+        typeof x === "number" &&
+        Number.isInteger(x),
     id: Symbol("BigNum:Number"),
     constructor: (x: number) => BigNum.create(BigInt(x))
 });
 
 registerJNumConstructor({
     precedence: 10,
-    predicate: (x): x is bigint => typeof x === "bigint",
+    predicate: (x): x is bigint =>
+        typeof x === "bigint",
     id: Symbol("BigNum:BigInt"),
     constructor: (x: bigint) => BigNum.create(x)
 });
 
 registerJNumConstructor({
     precedence: 10,
-    predicate: (x): x is string => typeof x === "string" && Number.isInteger(parseFloat(x)),
+    predicate: (x): x is string =>
+        typeof x === "string" &&
+        /^\d+n?$/.test(x) &&
+        Number.isInteger(BigInt(x)),
     id: Symbol("BigNum:String"),
-    constructor: (x) => BigNum.create(BigInt(parseInt(x)))
+    constructor: (x) => BigNum.create(BigInt(x))
 });

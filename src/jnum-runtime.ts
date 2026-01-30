@@ -399,22 +399,6 @@ function reachableTypes(from: JNumType): JNumType[] {
     return PRECOMPUTED_REACHABLE_CACHE.get(from) ?? [];
 }
 
-/* ====== Registering Specials ======= */
-
-registerType({
-    id: NaNNumType,
-    name: "NaNNum",
-    exact: false,
-    integer: false,
-});
-
-registerType({
-    id: InfinityNumType,
-    name: "InfinityNum",
-    exact: false,
-    integer: false,
-});
-
 /* ================ JNum Constructors =================== */
 
 type TypePredicate<T> = (x: unknown) => x is T;
@@ -436,15 +420,19 @@ export function getJNumConstructors() {
     return [...JNUM_CONSTRUCTORS];
 }
 
-type JNumOp = (a: _JNum, b: _JNum) => unknown;
-type JNumWithOps = { [key: string]: JNumOp };
+type JNumOp<T> = (a: _JNum, b: _JNum) => T;
+type JNumWithOps<T = any> = Record<string, JNumOp<T>> & ((x: unknown) => T);
 
-let __update_JNum_registered_op_keys: () => void = () => { };
-export const JNum = (function () {
+let __update_JNum_registered_op_keys: () => void = () => { return; };
+export const JNum: JNumWithOps = (function () {
     function JNum(x: unknown): _JNum {
         for (const cstr of getJNumConstructors()) {
-            if (!cstr.predicate(x)) continue;
-            return cstr.constructor(x);
+            try {
+                if (!cstr.predicate(x)) continue;
+                return cstr.constructor(x);
+            } catch {
+                continue;
+            }
         }
 
         throw new Error(`Invalid JNum constructor of type ${typeof x}`);
@@ -456,9 +444,48 @@ export const JNum = (function () {
                 (a: _JNum, b: _JNum) => dispatchBinaryOp(op, a, b);
     })();
 
-    return JNum;
+    return JNum as unknown as JNumWithOps;
 })();
 
 // TODO: Store multiple kernels rather than a single one, each optionally
 // containing a predicate and precedence, with the one lacking a pred acting as
 // the default case.
+
+/* ====== Registering Specials ======= */
+
+registerType({
+    id: NaNNumType,
+    name: "NaNNum",
+    exact: false,
+    integer: false,
+});
+
+registerType({
+    id: InfinityNumType,
+    name: "InfinityNum",
+    exact: false,
+    integer: false,
+});
+
+registerJNumConstructor({
+    precedence: 50,
+    predicate: (x): x is string =>
+        typeof x === "string" &&
+        x.toLowerCase() === "inf",
+    id: Symbol("InfinityNum:StringPos"),
+    constructor: () => {
+        return InfinityNum.pos();
+    }
+});
+
+registerJNumConstructor({
+    precedence: 50,
+    predicate: (x): x is string =>
+        typeof x === "string" &&
+        x.toLowerCase() === "-inf",
+    id: Symbol("InfinityNum:StringNeg"),
+    constructor: () => {
+        return InfinityNum.neg();
+    }
+});
+

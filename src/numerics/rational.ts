@@ -184,26 +184,33 @@ registerPromotion({
 
 registerJNumConstructor({
     precedence: 10,
-    predicate: (x): x is number => typeof x === "number" && !Number.isInteger(x),
+    predicate: (x): x is number =>
+        typeof x === "number" &&
+        !Number.isInteger(x),
     id: Symbol("RationalNum:Number"),
     constructor: (x: number) => RationalNum.createFromDecimal(x)
 });
 
 registerJNumConstructor({
     precedence: 10,
-    predicate: (x): x is string => typeof x === "string" && !Number.isInteger(parseFloat(x)),
+    predicate: (x): x is string =>
+        typeof x === "string" &&
+        !Number.isInteger(Number(x)) &&
+        !Number.isNaN(Number(x)),
     id: Symbol("RationalNum:StringDec"),
-    constructor: (x: string) => RationalNum.createFromDecimal(parseFloat(x))
+    constructor: (x: string) => RationalNum.createFromDecimal(Number(x))
 });
 
 registerJNumConstructor({
     precedence: 10,
-    predicate: (x): x is string => typeof x === "string" && /^[\d.]+\/[\d.]+$/.test(x),
+    predicate: (x): x is string =>
+        typeof x === "string" &&
+        /^[\d.]+\/[\d.]+$/.test(x),
     id: Symbol("RationalNum:StringFrac"),
     constructor: (x: string) => {
         const [num, den] = /^([\d.])+\/([\d.])+$/.exec(x)!.slice(1);
-        const nnum = parseFloat(num);
-        const nden = parseFloat(den);
+        const nnum = Number(num);
+        const nden = Number(den);
         return RationalNum.create(
             BigNum.create(nnum) as IntegerLike,
             BigNum.create(nden) as IntegerLike,

@@ -1,14 +1,46 @@
-import { registerBinaryOp } from "jnum-runtime";
+import { registerBinaryOp, JNum } from "jnum-runtime";
 import { BigNum, BigNumType } from "numerics/bignum";
 import { FixNum, FixNumType } from "numerics/fixnum";
 import { RationalNum, RationalNumType } from "numerics/rational";
+import { InexactRealNum, InexactRealNumType } from "numerics/inexactreal";
+import { ComplexNum, ComplexNumType } from "numerics/complex";
+import { OP_EQ, OP_NEQ, OP_LT, OP_LTE, OP_GT, OP_GTE } from "operators/op_names";
 
-export const OP_LT = "lt" as const;
-export const OP_LTE = "lte" as const;
-export const OP_GT = "gt" as const;
-export const OP_GTE = "gte" as const;
-export const OP_EQ = "eq" as const;
-export const OP_NEQ = "neq" as const;
+/* =========== ComplexNum ============ */
+
+registerBinaryOp<ComplexNum, ComplexNum, boolean>(OP_EQ, ComplexNumType, ComplexNumType,
+    (a, b) => JNum.eq(a.real, b.real) && JNum.eq(a.imag, b.imag)
+);
+
+registerBinaryOp<ComplexNum, ComplexNum, boolean>(OP_EQ, ComplexNumType, ComplexNumType,
+    (a, b) => !JNum.eq(a.real, b.real) || !JNum.eq(a.imag, b.imag)
+);
+
+/* ========= InexactRealNum ========== */
+
+registerBinaryOp<InexactRealNum, InexactRealNum, boolean>(OP_LT, InexactRealNumType, InexactRealNumType,
+    (a, b) => a.raw < b.raw
+);
+
+registerBinaryOp<InexactRealNum, InexactRealNum, boolean>(OP_LTE, InexactRealNumType, InexactRealNumType,
+    (a, b) => a.raw <= b.raw
+);
+
+registerBinaryOp<InexactRealNum, InexactRealNum, boolean>(OP_GT, InexactRealNumType, InexactRealNumType,
+    (a, b) => a.raw > b.raw
+);
+
+registerBinaryOp<InexactRealNum, InexactRealNum, boolean>(OP_GTE, InexactRealNumType, InexactRealNumType,
+    (a, b) => a.raw >= b.raw
+);
+
+registerBinaryOp<InexactRealNum, InexactRealNum, boolean>(OP_EQ, InexactRealNumType, InexactRealNumType,
+    (a, b) => a.raw === b.raw
+);
+
+registerBinaryOp<InexactRealNum, InexactRealNum, boolean>(OP_NEQ, InexactRealNumType, InexactRealNumType,
+    (a, b) => a.raw !== b.raw
+);
 
 /* =========== RationalNum =========== */
 

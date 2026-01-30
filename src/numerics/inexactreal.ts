@@ -81,7 +81,8 @@ registerType({
 
 registerJNumConstructor({
     precedence: 100,
-    predicate: (x): x is number => typeof x === "number",
+    predicate: (x): x is number =>
+        typeof x === "number",
     id: Symbol("InexactRealNum:Number"),
     constructor: (x: number) => {
         return InexactRealNum.create(x);
@@ -90,10 +91,12 @@ registerJNumConstructor({
 
 registerJNumConstructor({
     precedence: 100,
-    predicate: (x): x is string => typeof x === "string",
+    predicate: (x): x is string =>
+        typeof x === "string" &&
+        !Number.isNaN(Number(x)),
     id: Symbol("InexactRealNum:String"),
     constructor: (x) => {
-        const num = parseFloat(x);
+        const num = Number(x);
         if (Number.isNaN(num))
             return NaNNum.create();
 

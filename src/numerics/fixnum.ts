@@ -84,14 +84,18 @@ registerJNumConstructor({
 
 registerJNumConstructor({
     precedence: 5,
-    predicate: (x): x is bigint => typeof x === "bigint" && FixNum.MIN <= x && x <= FixNum.MAX,
+    predicate: (x): x is bigint =>
+        typeof x === "bigint" &&
+        FixNum.MIN <= Number(x) && Number(x) <= FixNum.MAX,
     id: Symbol("FixNum:BigInt"),
     constructor: (x: bigint) => FixNum.create(Number(x))
 });
 
 registerJNumConstructor({
     precedence: 5,
-    predicate: (x): x is string => typeof x === "string" && Number.isSafeInteger(parseFloat(x)),
+    predicate: (x): x is string =>
+        typeof x === "string" &&
+        Number.isSafeInteger(Number(x)),
     id: Symbol("FixNum:String"),
-    constructor: (x) => FixNum.create(parseInt(x))
+    constructor: (x) => FixNum.create(Number(x))
 });

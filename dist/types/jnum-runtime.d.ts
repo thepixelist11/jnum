@@ -36,6 +36,8 @@ export interface JNumConstructor<T, Pred extends TypePredicate<T>> {
 }
 export declare function registerJNumConstructor<T>(constructor: JNumConstructor<T, TypePredicate<T>>): void;
 export declare function getJNumConstructors(): JNumConstructor<unknown, TypePredicate<unknown>>[];
-export declare const JNum: (x: unknown) => _JNum;
+type JNumOp<T> = (a: _JNum, b: _JNum) => T;
+type JNumWithOps<T = any> = Record<string, JNumOp<T>> & ((x: unknown) => T);
+export declare const JNum: JNumWithOps;
 export {};
 //# sourceMappingURL=jnum-runtime.d.ts.map
