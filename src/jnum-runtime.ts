@@ -1,8 +1,8 @@
-import { _JNum, JNumType } from "jnum-base";
-import { NaNNum, NaNNumType } from "numerics/nan";
-import { InfinityNum, InfinityNumType } from "numerics/infinity";
-import { MinHeap } from "utils/min-heap";
-import { OrderedMap } from "utils/ordered-map";
+import { _JNum, JNumType } from "./jnum-base";
+import { NaNNum, NaNNumType } from "./numerics/nan";
+import { InfinityNum, InfinityNumType } from "./numerics/infinity";
+import { MinHeap } from "./utils/min-heap";
+import { OrderedMap } from "./utils/ordered-map";
 
 /* ============== TYPES ============== */
 
@@ -116,14 +116,11 @@ export function registerNaNPromotionsForType(t: JNumType): void {
     });
 }
 
-export function registerNaNOperator(op: Operation): void {
+export function registerNaNOperator(op: Operation, t: JNumType): void {
     registerBinaryOp(op, NaNNumType, NaNNumType, NaNNum.create);
 
-    for (const t of TYPES.keys()) {
-        if (t !== NaNNumType) {
-            registerBinaryOpCommutative(op, NaNNumType, t, NaNNum.create);
-        }
-    }
+    if (t !== NaNNumType)
+        registerBinaryOpCommutative(op, NaNNumType, t, NaNNum.create);
 }
 
 export function registerBinaryOp<

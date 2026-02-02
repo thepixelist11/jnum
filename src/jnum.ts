@@ -1,5 +1,5 @@
-export { NaNNum, NaNNumType } from "numerics/nan";
-export { InfinityNum, InfinityNumType } from "numerics/infinity";
+export { NaNNum, NaNNumType } from "./numerics/nan";
+export { InfinityNum, InfinityNumType } from "./numerics/infinity";
 
 export {
     allBinaryOperations,
@@ -24,13 +24,13 @@ export {
     registerUnaryOp,
     registerNaNPromotionsForType,
     registerNaNOperator,
-} from "jnum-runtime";
+} from "./jnum-runtime";
 
 export {
     _JNum,
     ExactLike,
     IntegerLike
-} from "jnum-base";
+} from "./jnum-base";
 
 import {
     OP_ADD,
@@ -45,7 +45,7 @@ import {
     OP_NEQ,
     OP_ABS,
     OP_NEG
-} from "operators/op_names";
+} from "./operators/op_names";
 
 export const OPS = {
     OP_ADD,

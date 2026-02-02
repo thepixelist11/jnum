@@ -1,4 +1,4 @@
-import { PrimitiveHint, _JNum } from "jnum-base";
+import { PrimitiveHint, _JNum } from "../jnum-base";
 export declare const NaNNumType: unique symbol;
 export declare class NaNNum extends _JNum {
     readonly type: symbol;

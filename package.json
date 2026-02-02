@@ -1,6 +1,6 @@
 {
     "name": "jnum",
-    "description": "A fast, powerful, and easy-to-use arbitrary precision math library for JavaScript and TypeScript.",
+    "description": "A fast and powerful multiple dispatch system designed for defining domain specific number systems in JS and TS",
     "version": "0.1.0",
     "homepage": "https://github.com/thepixelist11/jnum",
     "repository": {
@@ -30,7 +30,7 @@
     "type": "module",
     "main": "./dist/index.cjs.js",
     "module": "./dist/index.esm.js",
-    "types": "./dist/types/index.d.ts",
+    "types": "./dist/types/jnum.d.ts",
     "exports": {
         ".": {
             "require": "./dist/index.cjs.js",
@@ -51,7 +51,6 @@
         "@types/node": "^22.13.10",
         "baseline-browser-mapping": "^2.9.18",
         "eslint": "^9.39.2",
-        "express": "^4.21.2",
         "jest": "^29.7.0",
         "nodemon": "^3.1.9",
         "rollup": "^4.35.0",

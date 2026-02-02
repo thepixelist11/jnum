@@ -1,4 +1,4 @@
-import { _JNum, JNumType } from "jnum-base";
+import { _JNum, JNumType } from "./jnum-base";
 export interface RegisteredType {
     id: JNumType;
     name?: string;
@@ -15,7 +15,7 @@ type ErasedBinaryOpKernel = (lhs: _JNum, rhs: _JNum) => unknown;
 export declare function allBinaryOperations(): Iterable<Operation>;
 export declare function allOperations(): Iterable<Operation>;
 export declare function registerNaNPromotionsForType(t: JNumType): void;
-export declare function registerNaNOperator(op: Operation): void;
+export declare function registerNaNOperator(op: Operation, t: JNumType): void;
 export declare function registerBinaryOp<LHS extends _JNum, RHS extends _JNum, R>(op: Operation, lhs: JNumType, rhs: JNumType, kernel: BinaryOpKernel<LHS, RHS, R>): void;
 export declare function registerBinaryOpCommutative<LHS extends _JNum, RHS extends _JNum, R>(op: Operation, lhs: JNumType, rhs: JNumType, kernel: BinaryOpKernel<LHS | RHS, RHS | LHS, R>): void;
 export declare function getBinaryOp(op: Operation, lhs: JNumType, rhs: JNumType): ErasedBinaryOpKernel | null;

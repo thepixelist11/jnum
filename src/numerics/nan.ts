@@ -1,7 +1,7 @@
 import {
     PrimitiveHint,
     _JNum,
-} from "jnum-base";
+} from "../jnum-base";
 
 export const NaNNumType = Symbol("NaNNum");
 

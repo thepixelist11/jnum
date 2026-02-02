@@ -1,4 +1,4 @@
-import { PrimitiveHint, _JNum } from "jnum-base";
+import { PrimitiveHint, _JNum } from "../jnum-base";
 export declare const InfinityNumType: unique symbol;
 export declare class InfinityNum extends _JNum {
     readonly type: symbol;
