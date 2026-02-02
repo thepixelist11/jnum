@@ -1,7 +1,5 @@
-export { NaNNum, NaNNumType } from "./numerics/nan";
-export { InfinityNum, InfinityNumType } from "./numerics/infinity";
-export { allBinaryOperations, allOperations, dispatchBinaryOp, dispatchUnaryOp, getBinaryOp, getJNumConstructors, JNum, precomputeAllDispatchPlans, precomputePromotionPaths, precomputeReachableTypes, promoteValue, reduceBinary, registerBinaryOp, registerBinaryOpCommutative, registerJNumConstructor, registerNAryOp, registerNAryOpOnType, registerPromotion, registerType, registerUnaryOp, registerNaNPromotionsForType, registerNaNOperator, } from "./jnum-runtime";
-export { _JNum, ExactLike, IntegerLike } from "./jnum-base";
+export { allBinaryOperations, allOperations, dispatchBinaryOp, dispatchUnaryOp, getBinaryOp, getJNumConstructors, JNum, precomputeAllDispatchPlans, precomputePromotionPaths, precomputeReachableTypes, promoteValue, reduceBinary, registerBinaryOp, registerBinaryOpCommutative, registerJNumConstructor, registerNAryOp, registerNAryOpOnType, registerPromotion, registerType, registerUnaryOp, Operation, } from "./jnum-runtime";
+export { _JNum, PrimitiveHint, JNumType, } from "./jnum-base";
 export declare const OPS: {
     readonly OP_ADD: "add";
     readonly OP_SUB: "sub";

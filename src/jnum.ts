@@ -1,6 +1,3 @@
-export { NaNNum, NaNNumType } from "./numerics/nan";
-export { InfinityNum, InfinityNumType } from "./numerics/infinity";
-
 export {
     allBinaryOperations,
     allOperations,
@@ -22,14 +19,13 @@ export {
     registerPromotion,
     registerType,
     registerUnaryOp,
-    registerNaNPromotionsForType,
-    registerNaNOperator,
+    Operation,
 } from "./jnum-runtime";
 
 export {
     _JNum,
-    ExactLike,
-    IntegerLike
+    PrimitiveHint,
+    JNumType,
 } from "./jnum-base";
 
 import {

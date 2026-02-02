@@ -1,6 +1,4 @@
 import { _JNum, JNumType } from "./jnum-base";
-import { NaNNum, NaNNumType } from "./numerics/nan";
-import { InfinityNum, InfinityNumType } from "./numerics/infinity";
 import { MinHeap } from "./utils/min-heap";
 import { OrderedMap } from "./utils/ordered-map";
 
@@ -103,24 +101,6 @@ export function allBinaryOperations(): Iterable<Operation> {
 
 export function allOperations(): Iterable<Operation> {
     return [...BINARY_OPS.keys(), ...UNARY_OPS.keys(), ...NARY_OPS.keys()];
-}
-
-export function registerNaNPromotionsForType(t: JNumType): void {
-    if (t === NaNNumType) return;
-
-    registerPromotion({
-        from: t,
-        to: NaNNumType,
-        cost: 1,
-        apply: () => NaNNum.create(),
-    });
-}
-
-export function registerNaNOperator(op: Operation, t: JNumType): void {
-    registerBinaryOp(op, NaNNumType, NaNNumType, NaNNum.create);
-
-    if (t !== NaNNumType)
-        registerBinaryOpCommutative(op, NaNNumType, t, NaNNum.create);
 }
 
 export function registerBinaryOp<
@@ -572,42 +552,3 @@ export const JNum: JNumWithOps = (function () {
 // TODO: Store multiple kernels rather than a single one, each optionally
 // containing a predicate and precedence, with the one lacking a pred acting as
 // the default case.
-
-/* ====== Registering Specials ======= */
-
-registerType({
-    id: NaNNumType,
-    name: "NaNNum",
-    exact: false,
-    integer: false,
-});
-
-registerType({
-    id: InfinityNumType,
-    name: "InfinityNum",
-    exact: false,
-    integer: false,
-});
-
-registerJNumConstructor({
-    precedence: 50,
-    predicate: (x): x is string =>
-        typeof x === "string" &&
-        x.toLowerCase() === "inf",
-    id: Symbol("InfinityNum:StringPos"),
-    constructor: () => {
-        return InfinityNum.pos();
-    }
-});
-
-registerJNumConstructor({
-    precedence: 50,
-    predicate: (x): x is string =>
-        typeof x === "string" &&
-        x.toLowerCase() === "-inf",
-    id: Symbol("InfinityNum:StringNeg"),
-    constructor: () => {
-        return InfinityNum.neg();
-    }
-});
-
