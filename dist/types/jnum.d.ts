@@ -1,11 +1,19 @@
-export { FixNum } from "numerics/fixnum";
-export { BigNum } from "numerics/bignum";
-export { RationalNum } from "numerics/rational";
-export { InexactRealNum } from "numerics/inexactreal";
-export { ComplexNum } from "numerics/complex";
-export { NaNNum } from "numerics/nan";
-export { InfinityNum } from "numerics/infinity";
-export { JNum } from "jnum-runtime";
-import "operators/arithmetic";
-import "operators/predicates";
+export { NaNNum, NaNNumType } from "numerics/nan";
+export { InfinityNum, InfinityNumType } from "numerics/infinity";
+export { allBinaryOperations, allOperations, dispatchBinaryOp, dispatchUnaryOp, getBinaryOp, getJNumConstructors, JNum, precomputeAllDispatchPlans, precomputePromotionPaths, precomputeReachableTypes, promoteValue, reduceBinary, registerBinaryOp, registerBinaryOpCommutative, registerJNumConstructor, registerNAryOp, registerNAryOpOnType, registerPromotion, registerType, registerUnaryOp, registerNaNPromotionsForType, registerNaNOperator, } from "jnum-runtime";
+export { _JNum, ExactLike, IntegerLike } from "jnum-base";
+export declare const OPS: {
+    readonly OP_ADD: "add";
+    readonly OP_SUB: "sub";
+    readonly OP_MUL: "mul";
+    readonly OP_DIV: "div";
+    readonly OP_LT: "lt";
+    readonly OP_LTE: "lte";
+    readonly OP_GT: "gt";
+    readonly OP_GTE: "gte";
+    readonly OP_EQ: "eq";
+    readonly OP_NEQ: "neq";
+    readonly OP_ABS: "abs";
+    readonly OP_NEG: "neg";
+};
 //# sourceMappingURL=jnum.d.ts.map

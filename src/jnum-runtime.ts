@@ -20,14 +20,6 @@ export function registerType(t: RegisteredType): void {
 
     invalidatePromotionCache();
     invalidateReachableCache();
-
-    ensureNaNPromotionsForType(t.id);
-
-    if (t.id === NaNNumType) {
-        for (const other of TYPES.keys()) {
-            ensureNaNPromotionsForType(other);
-        }
-    }
 }
 
 /* ======== UNARY OPERATIONS ========= */
@@ -113,7 +105,7 @@ export function allOperations(): Iterable<Operation> {
     return [...BINARY_OPS.keys(), ...UNARY_OPS.keys(), ...NARY_OPS.keys()];
 }
 
-function ensureNaNPromotionsForType(t: JNumType): void {
+export function registerNaNPromotionsForType(t: JNumType): void {
     if (t === NaNNumType) return;
 
     registerPromotion({
@@ -122,6 +114,16 @@ function ensureNaNPromotionsForType(t: JNumType): void {
         cost: 1,
         apply: () => NaNNum.create(),
     });
+}
+
+export function registerNaNOperator(op: Operation): void {
+    registerBinaryOp(op, NaNNumType, NaNNumType, NaNNum.create);
+
+    for (const t of TYPES.keys()) {
+        if (t !== NaNNumType) {
+            registerBinaryOpCommutative(op, NaNNumType, t, NaNNum.create);
+        }
+    }
 }
 
 export function registerBinaryOp<
@@ -134,8 +136,6 @@ export function registerBinaryOp<
     rhs: JNumType,
     kernel: BinaryOpKernel<LHS, RHS, R>
 ): void {
-    const is_new_op = !BINARY_OPS.has(op);
-
     let lhs_map = BINARY_OPS.get(op);
     if (!lhs_map) {
         lhs_map = new Map();
@@ -150,16 +150,6 @@ export function registerBinaryOp<
 
     rhs_map.set(rhs, kernel as ErasedBinaryOpKernel);
     invalidateDispatchTable();
-
-    if (is_new_op) {
-        registerBinaryOp(op, NaNNumType, NaNNumType, NaNNum.create);
-
-        for (const t of TYPES.keys()) {
-            if (t !== NaNNumType) {
-                registerBinaryOpCommutative(op, NaNNumType, t, NaNNum.create);
-            }
-        }
-    }
 }
 
 export function registerBinaryOpCommutative<
@@ -298,6 +288,8 @@ export function dispatchBinaryOp<R = _JNum>(
 
         rhs_map.set(rhs.type, plan);
     }
+
+    console.log(lhs, rhs, plan.lhs_fn(lhs), plan.rhs_fn(rhs));
 
     return plan.kernel(plan.lhs_fn(lhs), plan.rhs_fn(rhs)) as R;
 }
@@ -540,12 +532,14 @@ export function getJNumConstructors() {
     return [...JNUM_CONSTRUCTORS];
 }
 
+type JNumObj<T = _JNum> = ((x: unknown) => T);
+
 type JNumOp<T> = (...args: _JNum[]) => T;
-type JNumWithOps<T = any> = Record<string, JNumOp<T>> & ((x: unknown) => T);
+type JNumWithOps<T = unknown> = Record<string, JNumOp<T>> & JNumObj;
 
 let __update_JNum_registered_op_keys: () => void = () => { return; };
 export const JNum: JNumWithOps = (function () {
-    function JNum(x: unknown): _JNum {
+    const JNumFn: JNumObj = (x: unknown): _JNum => {
         for (const cstr of getJNumConstructors()) {
             try {
                 if (!cstr.predicate(x)) continue;
@@ -558,22 +552,24 @@ export const JNum: JNumWithOps = (function () {
         throw new Error(`Invalid JNum constructor of type ${typeof x}`);
     }
 
+    const JNum = JNumFn as unknown as JNumWithOps;
+
     (__update_JNum_registered_op_keys = () => {
         for (const [op] of UNARY_OPS)
-            (JNum as unknown as JNumWithOps)[op] ??=
+            JNum[op] ??=
                 (a: _JNum) => dispatchUnaryOp(op, a);
 
         for (const op of allBinaryOperations())
-            (JNum as unknown as JNumWithOps)[op] ??=
+            JNum[op] ??=
                 (a: _JNum, b: _JNum) => dispatchBinaryOp(op, a, b);
 
         for (const [op, kernel] of NARY_OPS) {
-            (JNum as unknown as JNumWithOps)[op] ??=
+            JNum[op] ??=
                 (...args: _JNum[]) => kernel(args);
         }
     })();
 
-    return JNum as unknown as JNumWithOps;
+    return JNum;
 })();
 
 // TODO: Store multiple kernels rather than a single one, each optionally

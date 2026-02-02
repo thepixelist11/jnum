@@ -14,6 +14,8 @@ export type BinaryOpKernel<LHS extends _JNum = _JNum, RHS extends _JNum = _JNum,
 type ErasedBinaryOpKernel = (lhs: _JNum, rhs: _JNum) => unknown;
 export declare function allBinaryOperations(): Iterable<Operation>;
 export declare function allOperations(): Iterable<Operation>;
+export declare function registerNaNPromotionsForType(t: JNumType): void;
+export declare function registerNaNOperator(op: Operation): void;
 export declare function registerBinaryOp<LHS extends _JNum, RHS extends _JNum, R>(op: Operation, lhs: JNumType, rhs: JNumType, kernel: BinaryOpKernel<LHS, RHS, R>): void;
 export declare function registerBinaryOpCommutative<LHS extends _JNum, RHS extends _JNum, R>(op: Operation, lhs: JNumType, rhs: JNumType, kernel: BinaryOpKernel<LHS | RHS, RHS | LHS, R>): void;
 export declare function getBinaryOp(op: Operation, lhs: JNumType, rhs: JNumType): ErasedBinaryOpKernel | null;
@@ -44,8 +46,9 @@ export interface JNumConstructor<T, Pred extends TypePredicate<T>> {
 }
 export declare function registerJNumConstructor<T>(constructor: JNumConstructor<T, TypePredicate<T>>): void;
 export declare function getJNumConstructors(): JNumConstructor<unknown, TypePredicate<unknown>>[];
+type JNumObj<T = _JNum> = ((x: unknown) => T);
 type JNumOp<T> = (...args: _JNum[]) => T;
-type JNumWithOps<T = any> = Record<string, JNumOp<T>> & ((x: unknown) => T);
+type JNumWithOps<T = unknown> = Record<string, JNumOp<T>> & JNumObj;
 export declare const JNum: JNumWithOps;
 export {};
 //# sourceMappingURL=jnum-runtime.d.ts.map
