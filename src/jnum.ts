@@ -66,13 +66,13 @@ export const OPS = {
 } as const;
 
 import {
-    invalidateDispatchTable,
+    invalidateBinaryDispatchTable,
     invalidatePromotionCache,
     invalidateReachableCache,
 } from "./jnum-runtime"
 
 export const CACHE = {
-    invalidateDispatchTable,
+    invalidateDispatchTable: invalidateBinaryDispatchTable,
     invalidatePromotionCache,
     invalidateReachableCache,
 } as const;
