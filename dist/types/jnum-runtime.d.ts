@@ -48,5 +48,8 @@ type JNumObj<T = _JNum> = ((x: unknown) => T);
 type JNumOp<T> = (...args: _JNum[]) => T;
 type JNumWithOps<T = unknown> = Record<string, JNumOp<T>> & JNumObj;
 export declare const JNum: JNumWithOps;
+export declare function invalidateDispatchTable(): void;
+export declare function invalidatePromotionCache(): void;
+export declare function invalidateReachableCache(): void;
 export {};
 //# sourceMappingURL=jnum-runtime.d.ts.map

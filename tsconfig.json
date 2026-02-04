@@ -26,8 +26,7 @@
         "skipLibCheck": false,
         "esModuleInterop": true,
         "experimentalDecorators": true,
-        "emitDecoratorMetadata": false,
-        "verbatimModuleSyntax": true
+        "emitDecoratorMetadata": false
     },
     "include": [
         "src"
