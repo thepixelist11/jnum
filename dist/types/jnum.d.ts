@@ -16,9 +16,9 @@ export declare const OPS: {
     readonly OP_ABS: "abs";
     readonly OP_NEG: "neg";
 };
-import { invalidateDispatchTable, invalidatePromotionCache, invalidateReachableCache } from "./jnum-runtime";
+import { invalidateBinaryDispatchTable, invalidatePromotionCache, invalidateReachableCache } from "./jnum-runtime";
 export declare const CACHE: {
-    readonly invalidateDispatchTable: typeof invalidateDispatchTable;
+    readonly invalidateDispatchTable: typeof invalidateBinaryDispatchTable;
     readonly invalidatePromotionCache: typeof invalidatePromotionCache;
     readonly invalidateReachableCache: typeof invalidateReachableCache;
 };
