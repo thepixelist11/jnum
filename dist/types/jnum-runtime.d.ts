@@ -1,9 +1,8 @@
-import { _JNum, JNumType } from "./jnum-base";
+import type { JNumType } from "./jnum-base";
+import { _JNum } from "./jnum-base";
 export interface RegisteredType {
     id: JNumType;
     name?: string;
-    exact?: boolean;
-    integer?: boolean;
 }
 export declare function registerType(t: RegisteredType): void;
 export type UnaryOpKernel<T extends _JNum = _JNum, R = unknown> = (arg: T) => R;
@@ -18,7 +17,8 @@ export declare function registerBinaryOp<LHS extends _JNum, RHS extends _JNum, R
 export declare function registerBinaryOpCommutative<LHS extends _JNum, RHS extends _JNum, R>(op: Operation, lhs: JNumType, rhs: JNumType, kernel: BinaryOpKernel<LHS | RHS, RHS | LHS, R>): void;
 export declare function getBinaryOp(op: Operation, lhs: JNumType, rhs: JNumType): ErasedBinaryOpKernel | null;
 export declare function dispatchBinaryOp<R = _JNum>(op: Operation, lhs: _JNum, rhs: _JNum): R;
-export declare function precomputeAllDispatchPlans(): void;
+export declare function precomputeAllUnaryDispatchPlans(): void;
+export declare function precomputeAllBinaryDispatchPlans(): void;
 export type NAryKernel<R = _JNum> = (args: readonly _JNum[]) => R;
 export declare function registerNAryOp<R = _JNum>(op: Operation, kernel: NAryKernel<R>): void;
 export declare function registerNAryOpOnType<R = _JNum>(op: Operation, target: JNumType, kernel: (args: readonly _JNum[]) => R): void;

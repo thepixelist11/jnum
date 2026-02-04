@@ -27,6 +27,7 @@
         "esModuleInterop": true,
         "experimentalDecorators": true,
         "emitDecoratorMetadata": false,
+        "verbatimModuleSyntax": true
     },
     "include": [
         "src"

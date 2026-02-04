@@ -6,7 +6,8 @@ export {
     getBinaryOp,
     getJNumConstructors,
     JNum,
-    precomputeAllDispatchPlans,
+    precomputeAllUnaryDispatchPlans,
+    precomputeAllBinaryDispatchPlans,
     precomputePromotionPaths,
     precomputeReachableTypes,
     promoteValue,
@@ -19,11 +20,17 @@ export {
     registerPromotion,
     registerType,
     registerUnaryOp,
-    Operation,
 } from "./jnum-runtime";
+
+export type {
+    Operation
+} from "./jnum-runtime"
 
 export {
     _JNum,
+} from "./jnum-base";
+
+export type {
     PrimitiveHint,
     JNumType,
 } from "./jnum-base";
@@ -56,4 +63,16 @@ export const OPS = {
     OP_NEQ,
     OP_ABS,
     OP_NEG
+} as const;
+
+import {
+    invalidateDispatchTable,
+    invalidatePromotionCache,
+    invalidateReachableCache,
+} from "./jnum-runtime"
+
+export const CACHE = {
+    invalidateDispatchTable,
+    invalidatePromotionCache,
+    invalidateReachableCache,
 } as const;

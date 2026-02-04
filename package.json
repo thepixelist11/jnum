@@ -1,7 +1,7 @@
 {
     "name": "jnum",
     "description": "A fast and powerful multiple dispatch system designed for defining domain specific number systems in JS and TS",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "homepage": "https://github.com/thepixelist11/jnum",
     "repository": {
         "type": "git",
@@ -14,7 +14,8 @@
         "build": "./scripts/build.sh",
         "build:fast": "./scripts/build-fast.sh",
         "dev": "nodemon --watch ./src/*.ts --exec ./scripts/build-fast.sh",
-        "test": "jest --verbose --coverage"
+        "test": "jest --verbose --coverage",
+        "bench": "npx tsx --expose-gc bench/run.ts"
     },
     "keywords": [
         "library",
@@ -59,6 +60,7 @@
         "rollup": "^4.35.0",
         "rollup-plugin-typescript2": "^0.36.0",
         "ts-jest": "^29.4.6",
+        "tsx": "^4.21.0",
         "typescript": "^5.8.2",
         "typescript-eslint": "^8.53.1"
     }
