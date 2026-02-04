@@ -47,7 +47,8 @@ const TESTS: Benchmark[] = [
             CACHE.invalidateDispatchTable();
             CACHE.invalidatePromotionCache();
             CACHE.invalidateReachableCache();
-        }
+        },
+        baseline: (x: _JNum) => x,
     } as Benchmark<1>,
     {
         name: "unary warm dispatch",
@@ -77,7 +78,8 @@ const TESTS: Benchmark[] = [
             CACHE.invalidateDispatchTable();
             CACHE.invalidatePromotionCache();
             CACHE.invalidateReachableCache();
-        }
+        },
+        baseline: (x: _JNum) => x,
     } as Benchmark<1>,
     {
         name: "unary direct kernel",
@@ -96,24 +98,10 @@ const TESTS: Benchmark[] = [
             CACHE.invalidateDispatchTable();
             CACHE.invalidatePromotionCache();
             CACHE.invalidateReachableCache();
-        }
+        },
+        baseline: (x: _JNum) => x,
 
     } as Benchmark<1>,
-    {
-        name: "baseline",
-        iters: 500,
-        repeat_full_test: 100,
-        run: (b: _JNum) => b,
-        setup: () => {
-            return [new B()];
-        },
-        teardown: () => {
-            CACHE.invalidateDispatchTable();
-            CACHE.invalidatePromotionCache();
-            CACHE.invalidateReachableCache();
-        }
-
-    } as Benchmark<1>
 ];
 
 export default TESTS;

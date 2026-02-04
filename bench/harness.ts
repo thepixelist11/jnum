@@ -18,6 +18,12 @@ export type Benchmark<N extends 0 | 1 | 2 | 3 | 4 = 0 | 1 | 2 | 3 | 4> = {
     : N extends 3 ? (a0: unknown, a1: unknown, a2: unknown) => void
     : N extends 4 ? (a0: unknown, a1: unknown, a2: unknown, a3: unknown) => void
     : never;
+    baseline?: N extends 0 ? () => void
+    : N extends 1 ? (a0: unknown) => void
+    : N extends 2 ? (a0: unknown, a1: unknown) => void
+    : N extends 3 ? (a0: unknown, a1: unknown, a2: unknown) => void
+    : N extends 4 ? (a0: unknown, a1: unknown, a2: unknown, a3: unknown) => void
+    : never;
     teardown?: () => void;
 }
 
@@ -169,17 +175,24 @@ function formatLargeInt(num: number): string {
     return `${(num / 1_000_000_000).toFixed(3)} B`;
 }
 
-export function printResult(result: BenchmarkResult, empty_call_cost = 0) {
+export function printResult(result: BenchmarkResult, baseline?: BenchmarkResult) {
     process.stdout.write(`=== ${result.name}\n`);
     process.stdout.write(` median     : ${formatNanoseconds(result.avg)}\n`);
-    process.stdout.write(` median_cor : ${formatNanoseconds(Math.max(0, result.avg - empty_call_cost))}\n`);
+
+    if (baseline) {
+        const corrected = Math.max(0, result.avg - baseline.avg);
+        process.stdout.write(` median_cor : ${formatNanoseconds(corrected)}\n`);
+    }
+
     process.stdout.write(` delta      : ${formatNanoseconds(result.delta)}\n`);
     process.stdout.write(` total      : ${formatNanoseconds(result.total)}\n`);
     process.stdout.write(` iters      : ${result.iters}\n`);
     process.stdout.write(` runs       : ${result.runs}\n`);
     process.stdout.write(` ops/sec    : ${formatLargeInt(result.ops)}\n`);
-    if (empty_call_cost > 0)
-        process.stdout.write(` empty call : ${formatNanoseconds(empty_call_cost)}\n`);
+
+    if (baseline)
+        process.stdout.write(` baseline   : ${formatNanoseconds(baseline.avg)}\n`);
+
     process.stdout.write(`---\n`);
     process.stdout.write(` min        : ${formatNanoseconds(result.min)}\n`);
     process.stdout.write(` p25        : ${formatNanoseconds(result.p25)}\n`);
@@ -189,23 +202,20 @@ export function printResult(result: BenchmarkResult, empty_call_cost = 0) {
     process.stdout.write("\n");
 }
 
-function measureEmptyCallCost(iters: number) {
-    const fn = () => { };
-
-    for (let i = 0; i < JIT_ITERS; i++) fn();
-
-    const t0 = now();
-    for (let i = 0; i < iters; i++) fn();
-    const t1 = now();
-
-    return ns(t0, t1) / iters;
-}
-
 export function runSuite(tests: Benchmark[]) {
-    const empty_call_cost = measureEmptyCallCost(1000);
-
     for (const t of tests) {
+        let baseline_result: BenchmarkResult | undefined = undefined;
+
+        if (t.baseline) {
+            baseline_result = runBenchmark({
+                ...t,
+                name: `${t.name} (baseline)`,
+                run: t.baseline,
+                baseline: undefined,
+            });
+        }
+
         const result = runBenchmark(t);
-        printResult(result, empty_call_cost);
+        printResult(result, baseline_result);
     }
 }
