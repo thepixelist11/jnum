@@ -1,54 +1,49 @@
 import { Benchmark } from "../harness";
-import {
-    _JNum,
-    registerType,
-    registerUnaryOp,
-    dispatchUnaryOp,
-    registerPromotion,
-    precomputeAllUnaryDispatchPlans,
-    precomputeReachableTypes,
-    precomputePromotionPaths,
-    CACHE,
-} from "../../src/jnum";
+import { _JNum, JNum } from "../../src/jnum";
+
+let J = new JNum();
 
 let sink: any;
 
-const AType = Symbol("A");
-const BType = Symbol("B");
-
-class A extends _JNum {
-    readonly type = AType;
-}
-
-class B extends _JNum {
-    readonly type = BType;
-}
 
 const TESTS: Benchmark[] = [
     {
         name: "unary cold dispatch",
         iters: 1,
         repeat_full_test: 20_000,
-        run: (a: _JNum) => dispatchUnaryOp("test", a),
+        run: (a: _JNum) => J.dispatchUnaryOp("test", a),
         setup: () => {
-            registerType({ id: AType });
-            registerType({ id: BType });
+            J = new JNum();
 
-            registerPromotion({
+            const AType = J.JNumType("AType");
+            const BType = J.JNumType("AType");
+
+            class A extends _JNum {
+                readonly type = AType;
+            }
+
+            class B extends _JNum {
+                readonly type = BType;
+            }
+
+            J.registerType({ id: AType });
+            J.registerType({ id: BType });
+
+            J.registerPromotion({
                 from: AType,
                 to: BType,
                 cost: 1,
                 apply: v => v
             });
 
-            registerUnaryOp("test", BType, (x: B) => x);
+            J.registerUnaryOp("test", BType, (x: B) => x);
 
             return [new A()];
         },
         teardown: () => {
-            CACHE.invalidateDispatchTable();
-            CACHE.invalidatePromotionCache();
-            CACHE.invalidateReachableCache();
+            J.invalidateBinaryDispatchTable();
+            J.invalidatePromotionCache();
+            J.invalidateReachableCache();
         },
         baseline: (x: _JNum) => sink = x,
     } as Benchmark<1>,
@@ -56,30 +51,43 @@ const TESTS: Benchmark[] = [
         name: "unary warm dispatch",
         iters: 500,
         repeat_full_test: 100,
-        run: (a: _JNum) => dispatchUnaryOp("test", a),
+        run: (a: _JNum) => J.dispatchUnaryOp("test", a),
         setup: () => {
-            registerType({ id: AType });
-            registerType({ id: BType });
+            J = new JNum();
 
-            registerPromotion({
+            const AType = J.JNumType("AType");
+            const BType = J.JNumType("AType");
+
+            class A extends _JNum {
+                readonly type = AType;
+            }
+
+            class B extends _JNum {
+                readonly type = BType;
+            }
+
+            J.registerType({ id: AType });
+            J.registerType({ id: BType });
+
+            J.registerPromotion({
                 from: AType,
                 to: BType,
                 cost: 1,
                 apply: v => v
             });
 
-            registerUnaryOp("test", BType, (x: B) => x);
+            J.registerUnaryOp("test", BType, (x: B) => x);
 
-            precomputeAllUnaryDispatchPlans();
-            precomputeReachableTypes();
-            precomputePromotionPaths();
+            J.precomputeAllUnaryDispatchPlans();
+            J.precomputeReachableTypes();
+            J.precomputePromotionPaths();
 
             return [new A()];
         },
         teardown: () => {
-            CACHE.invalidateDispatchTable();
-            CACHE.invalidatePromotionCache();
-            CACHE.invalidateReachableCache();
+            J.invalidateBinaryDispatchTable();
+            J.invalidatePromotionCache();
+            J.invalidateReachableCache();
         },
         baseline: (x: _JNum) => sink = x,
     } as Benchmark<1>,
@@ -87,19 +95,28 @@ const TESTS: Benchmark[] = [
         name: "unary direct kernel",
         iters: 500,
         repeat_full_test: 100,
-        run: (b: _JNum) => dispatchUnaryOp("test", b),
+        run: (b: _JNum) => J.dispatchUnaryOp("test", b),
         setup: () => {
-            registerType({ id: AType });
-            registerType({ id: BType });
+            J = new JNum();
 
-            registerUnaryOp("test", BType, (x: B) => x);
+            const AType = J.JNumType("AType");
+            const BType = J.JNumType("AType");
+
+            class B extends _JNum {
+                readonly type = BType;
+            }
+
+            J.registerType({ id: AType });
+            J.registerType({ id: BType });
+
+            J.registerUnaryOp("test", BType, (x: B) => x);
 
             return [new B()];
         },
         teardown: () => {
-            CACHE.invalidateDispatchTable();
-            CACHE.invalidatePromotionCache();
-            CACHE.invalidateReachableCache();
+            J.invalidateBinaryDispatchTable();
+            J.invalidatePromotionCache();
+            J.invalidateReachableCache();
         },
         baseline: (x: _JNum) => sink = x,
 

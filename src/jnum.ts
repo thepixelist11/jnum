@@ -1,34 +1,8 @@
-export {
-    allBinaryOperations,
-    allOperations,
-    dispatchBinaryOp,
-    dispatchUnaryOp,
-    getBinaryOp,
-    getJNumConstructors,
-    JNum,
-    precomputeAllUnaryDispatchPlans,
-    precomputeAllBinaryDispatchPlans,
-    precomputePromotionPaths,
-    precomputeReachableTypes,
-    promoteValue,
-    reduceBinary,
-    registerBinaryOp,
-    registerBinaryOpCommutative,
-    registerJNumConstructor,
-    registerNAryOp,
-    registerNAryOpOnType,
-    registerPromotion,
-    registerType,
-    registerUnaryOp,
-} from "./jnum-runtime";
+export { JNum } from "./jnum-runtime";
 
-export type {
-    Operation
-} from "./jnum-runtime"
+export type { Operation } from "./jnum-runtime"
 
-export {
-    _JNum,
-} from "./jnum-base";
+export { _JNum } from "./jnum-base";
 
 export type {
     PrimitiveHint,
@@ -65,14 +39,3 @@ export const OPS = {
     OP_NEG
 } as const;
 
-import {
-    invalidateBinaryDispatchTable,
-    invalidatePromotionCache,
-    invalidateReachableCache,
-} from "./jnum-runtime"
-
-export const CACHE = {
-    invalidateDispatchTable: invalidateBinaryDispatchTable,
-    invalidatePromotionCache,
-    invalidateReachableCache,
-} as const;
