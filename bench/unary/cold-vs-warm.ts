@@ -11,6 +11,8 @@ import {
     CACHE,
 } from "../../src/jnum";
 
+let sink: any;
+
 const AType = Symbol("A");
 const BType = Symbol("B");
 
@@ -48,7 +50,7 @@ const TESTS: Benchmark[] = [
             CACHE.invalidatePromotionCache();
             CACHE.invalidateReachableCache();
         },
-        baseline: (x: _JNum) => x,
+        baseline: (x: _JNum) => sink = x,
     } as Benchmark<1>,
     {
         name: "unary warm dispatch",
@@ -79,7 +81,7 @@ const TESTS: Benchmark[] = [
             CACHE.invalidatePromotionCache();
             CACHE.invalidateReachableCache();
         },
-        baseline: (x: _JNum) => x,
+        baseline: (x: _JNum) => sink = x,
     } as Benchmark<1>,
     {
         name: "unary direct kernel",
@@ -99,7 +101,7 @@ const TESTS: Benchmark[] = [
             CACHE.invalidatePromotionCache();
             CACHE.invalidateReachableCache();
         },
-        baseline: (x: _JNum) => x,
+        baseline: (x: _JNum) => sink = x,
 
     } as Benchmark<1>,
 ];

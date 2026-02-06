@@ -14,7 +14,7 @@ VERSION="$(jq .version ./package.json -r)"
 echo -e "${YELLOW}=== Starting Full Build ===${RESET}"
 
 if [[ -f "release/jnum-$VERSION.tgz" && "$1" != "rebuild" ]]; then
-    echo "The current version ($VERSION) has already been build. Rerun the script with the 'rebuild' option to rebuild the current version."
+    echo "The current version ($VERSION) has already been built. Rerun the script with the 'rebuild' option to rebuild the current version."
     exit 1
 fi
 

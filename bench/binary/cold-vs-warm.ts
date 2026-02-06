@@ -2,10 +2,7 @@ import { Benchmark } from "../harness";
 import {
     _JNum,
     registerType,
-    registerUnaryOp,
-    dispatchUnaryOp,
     registerPromotion,
-    precomputeAllUnaryDispatchPlans,
     precomputeReachableTypes,
     precomputePromotionPaths,
     CACHE,

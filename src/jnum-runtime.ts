@@ -6,7 +6,7 @@ import { OrderedMap } from "./utils/ordered-map";
 /* ============== TYPES ============== */
 
 /**
- * A numeric type registered in the JNum system.
+ * A type registered in the JNum system.
  */
 export interface RegisteredType {
     /** Unique type identifier */
@@ -20,7 +20,7 @@ export interface RegisteredType {
 const TYPES = new Map<JNumType, RegisteredType>();
 
 /**
- * Registers a numeric type with the JNum system.
+ * Registers a type with the JNum system.
  *
  * @param t The type to register.
  *

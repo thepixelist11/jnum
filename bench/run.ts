@@ -36,7 +36,6 @@ interface CPUStatInfo {
     nominal_freq?: number;
     scaling_freq?: number;
     max_freq?: number;
-    governor?: string;
     turbo_enabled?: boolean;
 }
 
@@ -47,7 +46,6 @@ function CPUStat(core: number = 0): CPUStatInfo {
     let core_count: number = os.cpus().length;
     let nominal_freq: number | undefined = os.cpus()[core].speed;
     let max_freq: number | undefined = undefined;
-    let governor: string | undefined = undefined;
 
     const platform = os.platform();
 
@@ -66,10 +64,6 @@ function CPUStat(core: number = 0): CPUStatInfo {
             try {
                 const maxStr = fs.readFileSync(`/sys/devices/system/cpu/cpu${core}/cpufreq/cpuinfo_max_freq`, "utf8").trim();
                 max_freq = Number(maxStr) / 1000;
-            } catch { }
-
-            try {
-                governor = fs.readFileSync(`/sys/devices/system/cpu/cpu${core}/cpufreq/scaling_governor`, "utf8").trim();
             } catch { }
 
         } else if (platform === "win32") {
@@ -111,7 +105,6 @@ function CPUStat(core: number = 0): CPUStatInfo {
         nominal_freq,
         scaling_freq,
         max_freq,
-        governor,
         turbo_enabled
     };
 }
@@ -133,7 +126,6 @@ function printCPUStats(stats: CPUStatInfo, col_size = 14) {
     if (stats.nominal_freq) process.stdout.write("Nominal Freq".padEnd(col_size) + `: ${stats.nominal_freq.toFixed(2)} MHz\n`);
     if (stats.scaling_freq) process.stdout.write("Scaling Freq".padEnd(col_size) + `: ${stats.scaling_freq.toFixed(2)} MHz\n`);
     if (stats.max_freq) process.stdout.write("Max Freq".padEnd(col_size) + `: ${stats.max_freq.toFixed(2)} MHz\n`);
-    if (stats.governor) process.stdout.write("Governor".padEnd(col_size) + `: ${stats.governor}\n`);
     process.stdout.write("---\n");
 }
 
