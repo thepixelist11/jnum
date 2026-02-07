@@ -1,7 +1,7 @@
 {
     "name": "jnum",
     "description": "A fast and powerful multiple dispatch system designed for defining domain specific number systems in JS and TS",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "homepage": "https://github.com/thepixelist11/jnum",
     "repository": {
         "type": "git",

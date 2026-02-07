@@ -1,3 +1,5 @@
+import { JNum } from "jnum-runtime";
+
 /**
  * Hints used for primitive coercion.
  *
@@ -27,10 +29,16 @@ export type JNumType = symbol;
  */
 export abstract class _JNum {
     /** The runtime type of this value */
-    abstract readonly type: JNumType;
+    public abstract readonly type: JNumType;
+
+    /** The static registered type of this value */
+    public static Type: JNumType;
+
+    /** The instance of JNum under which this type is registered */
+    public abstract readonly J: JNum;
 
     /**
-     * Returns a stirng representation of the value.
+     * Returns a string representation of the value.
      *
      * @remarks
      * This method delegates to JavaScript's default string coercion.
@@ -47,4 +55,3 @@ export abstract class _JNum {
      */
     public [Symbol.toStringTag]() { return this.type.description; }
 }
-

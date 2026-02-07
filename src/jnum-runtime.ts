@@ -8,11 +8,7 @@ import { OrderedMap } from "./utils/ordered-map";
  */
 export interface RegisteredType {
     /** Unique type identifier */
-    id: JNumType;
-
-    /** Optional human-readable name for the type. If not specified,
-     * Symbol.prototype.description will be used. */
-    name?: string;
+    id: symbol;
 };
 
 interface UnaryDispatchPlan {
@@ -157,7 +153,8 @@ export class JNum {
     private readonly JNUM_CONSTRUCTORS = new OrderedMap<JNumConstructor<unknown, TypePredicate<unknown>>>();
 
     /**
-     * Creates a new JNumType symbol with the given string.
+     * Gets the JNumType symbol associated with a given string, or creates it
+     * if it does not exist.
      *
      * @param id The string to use as the symbol description.
      * @returns The generated JNumType symbol.
@@ -172,6 +169,9 @@ export class JNum {
      * This is functionally equivalent to using a string-based
      * type, though symbol-based hashmap lookups are measurably faster than
      * string-based ones.
+     *
+     * If a symbol is created through this function, it will not automatically
+     * be registered.
      */
     public JNumType(id: string): JNumType {
         if (!this.TYPE_STR_SYM_MAP.has(id))
@@ -187,19 +187,16 @@ export class JNum {
      *
      * @example
      * // Register a new type in JNum with the ID of `NumberType`
-     * const NumberType = J.JNumType("NumberType");
-     * J.registerType({
-     *    id: NumberType,
-     *    name: "NumberType",
-     * });
+     * J.registerType("NumberType");
      *
      * @remarks
      * This function adds the type to the internal type registry and invalidates
      * all promotion and dispatch caches to ensure that newly registered types can
      * participate in operations and promotions.
      */
-    public registerType(t: RegisteredType): void {
-        this.TYPES.set(t.id, t);
+    public registerType(t: string): void {
+        const sym = this.JNumType(t);
+        this.TYPES.set(sym, { id: sym });
 
         this.invalidatePromotionCache();
         this.invalidateReachableCache();
@@ -218,7 +215,6 @@ export class JNum {
      *
      * @example
      * // Registers a negation operation for NumberType.
-     * const NumberType = J.JNumType("NumberType");
      * J.registerUnaryOp(OPS.OP_NEG, NumberType,
      *     (a) => J.Num(-a.value)
      * );
@@ -375,7 +371,6 @@ export class JNum {
      *
      * @example
      * // Registers the `add` binary operation between numbers.
-     * const NumberType = J.JNumType("NumberType");
      * J.registerBinaryOp(OPS.OP_ADD, NumberType, NumberType,
      *     (a, b) => J.Num(a.value + b.value)
      * );
@@ -440,8 +435,6 @@ export class JNum {
      *
      * @example
      * // Registers a commutative `add` between both finite NumberType and InfinityType
-     * const NumberType = J.JNumType("NumberType");
-     * const InfinityType = J.JNumType("InfinityType");
      * J.registerBinaryOpCommutative(OPS.OP_ADD, NumberType, InfinityType,
      *     (a, b) => a.type === InfinityType ? a : b
      * );
@@ -674,7 +667,6 @@ export class JNum {
      *
      * @example
      * // Registers a variadic addition operation.
-     * const NumberType = J.JNumType("NumberType");
      * J.registerNAryOpOnType(OPS.OP_ADD, NumberType,
      *     (...nums) => {
      *         const sum = nums.reduce((acc, x) => x.value + acc, 0);
@@ -773,8 +765,6 @@ export class JNum {
      * @example
      * // Registers a promotion from a Number (NumberType) to a Rational
      * // (RationalType).
-     * const NumberType = J.JNumType("NumberType");
-     * const RationalType = J.JNumType("RationalType");
      * registerPromotion({
      *     from: NumberType,
      *     to: NumberType,
@@ -964,9 +954,13 @@ export class JNum {
             throw new Error(`Invalid JNum constructor of type ${typeof x}`);
         }
 
-        const JNum = JNumFn as unknown as JNumWithOps;
+        const Num = JNumFn as unknown as JNumWithOps;
 
-        return JNum;
+        Num["typeof"] = (x: _JNum): JNumType => {
+            return x.type;
+        };
+
+        return Num;
     })();
 
     private installUnaryOp(op: Operation) {
