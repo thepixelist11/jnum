@@ -194,12 +194,19 @@ export class JNum {
      * all promotion and dispatch caches to ensure that newly registered types can
      * participate in operations and promotions.
      */
-    public registerType(t: string): void {
+    public registerType(t: string | symbol): JNumType {
+        this.invalidatePromotionCache();
+        this.invalidateReachableCache();
+
+        if (typeof t === "symbol") {
+            this.TYPES.set(t, { id: t });
+            return t;
+        }
+
         const sym = this.JNumType(t);
         this.TYPES.set(sym, { id: sym });
 
-        this.invalidatePromotionCache();
-        this.invalidateReachableCache();
+        return sym;
     }
 
     /**

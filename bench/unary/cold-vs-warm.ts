@@ -20,14 +20,18 @@ const TESTS: Benchmark[] = [
 
             class A extends _JNum {
                 readonly type = AType;
+                readonly J = J;
+                static readonly Type = AType;
             }
 
             class B extends _JNum {
                 readonly type = BType;
+                readonly J = J;
+                static readonly Type = BType;
             }
 
-            J.registerType({ id: AType });
-            J.registerType({ id: BType });
+            J.registerType(A.Type);
+            J.registerType(B.Type);
 
             J.registerPromotion({
                 from: AType,
@@ -60,14 +64,18 @@ const TESTS: Benchmark[] = [
 
             class A extends _JNum {
                 readonly type = AType;
+                readonly J = J;
+                static readonly Type = AType;
             }
 
             class B extends _JNum {
                 readonly type = BType;
+                readonly J = J;
+                static readonly Type = BType;
             }
 
-            J.registerType({ id: AType });
-            J.registerType({ id: BType });
+            J.registerType(A.Type);
+            J.registerType(B.Type);
 
             J.registerPromotion({
                 from: AType,
@@ -99,15 +107,15 @@ const TESTS: Benchmark[] = [
         setup: () => {
             J = new JNum();
 
-            const AType = J.JNumType("AType");
             const BType = J.JNumType("AType");
 
             class B extends _JNum {
                 readonly type = BType;
+                readonly J = J;
+                static readonly Type = BType;
             }
 
-            J.registerType({ id: AType });
-            J.registerType({ id: BType });
+            J.registerType(B.Type);
 
             J.registerUnaryOp("test", BType, (x: B) => x);
 
