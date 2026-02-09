@@ -519,7 +519,7 @@ export class JNum {
         op: Operation,
         lhs_type: JNumType,
         rhs_type: JNumType,
-    ): DispatchPlan | null {
+    ): DispatchPlan | undefined {
         const direct = this.getBinaryOp(op, lhs_type, rhs_type);
         if (direct) {
             return {
@@ -538,7 +538,7 @@ export class JNum {
         const rhs_targets = this.reachableTypesFiltered(op, rhs_type, false);
 
         let best_cost = Infinity;
-        let best: DispatchPlan | null = null;
+        let best: DispatchPlan | undefined = undefined;
 
         for (const lt of lhs_targets) {
             const lhs_pc = this.promotionCostAndPath(lhs_type, lt);
@@ -608,7 +608,8 @@ export class JNum {
             lhs_map.set(lhs.type, rhs_map);
         }
 
-        let plan: DispatchPlan | null = rhs_map.get(rhs.type) ?? null;
+        let plan: DispatchPlan | undefined = rhs_map.get(rhs.type);
+
         if (!plan) {
             plan = this.resolveDispatchPlan(op, lhs.type, rhs.type);
             if (!plan)

@@ -37,6 +37,7 @@ export interface BenchmarkResult {
     min: number;
     p25: number;
     p75: number;
+    p95: number;
     max: number;
     rcv: number;
     ops: number;
@@ -106,6 +107,7 @@ export function runBenchmark<N extends 0 | 1 | 2 | 3 | 4>(b: Benchmark<N>): Benc
     const min = times[0];
     const p25 = times[Math.floor(times.length * 0.25)];
     const p75 = times[Math.floor(times.length * 0.75)];
+    const p95 = times[Math.floor(times.length * 0.95)];
     const max = times[times.length - 1];
 
     const rcv = mad / median;
@@ -115,6 +117,7 @@ export function runBenchmark<N extends 0 | 1 | 2 | 3 | 4>(b: Benchmark<N>): Benc
     const min_iter = Math.max(0, min / b.iters);
     const p25_iter = Math.max(0, p25 / b.iters);
     const p75_iter = Math.max(0, p75 / b.iters);
+    const p95_iter = Math.max(0, p95 / b.iters);
     const max_iter = Math.max(0, max / b.iters);
 
     return {
@@ -127,6 +130,7 @@ export function runBenchmark<N extends 0 | 1 | 2 | 3 | 4>(b: Benchmark<N>): Benc
         min: min_iter,
         p25: p25_iter,
         p75: p75_iter,
+        p95: p95_iter,
         max: max_iter,
         rcv,
         ops: Math.floor(1e9 / Math.max(1, avg)),
@@ -197,6 +201,7 @@ export function printResult(result: BenchmarkResult, baseline?: BenchmarkResult)
     process.stdout.write(` min        : ${formatNanoseconds(result.min)}\n`);
     process.stdout.write(` p25        : ${formatNanoseconds(result.p25)}\n`);
     process.stdout.write(` p75        : ${formatNanoseconds(result.p75)}\n`);
+    process.stdout.write(` p95        : ${formatNanoseconds(result.p95)}\n`);
     process.stdout.write(` max        : ${formatNanoseconds(result.max)}\n`);
     process.stdout.write(` rcv        : ${(result.rcv * 100).toFixed(2)}%\n`);
     process.stdout.write("\n");
