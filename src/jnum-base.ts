@@ -1,4 +1,4 @@
-import { JNum } from "jnum-runtime";
+import { JNum } from "./jnum-runtime";
 
 /**
  * Hints used for primitive coercion.

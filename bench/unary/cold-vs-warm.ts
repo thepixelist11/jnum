@@ -5,12 +5,11 @@ let J = new JNum();
 
 let sink: any;
 
-
 const TESTS: Benchmark[] = [
     {
         name: "unary cold dispatch",
         iters: 1,
-        repeat_full_test: 20_000,
+        repeat_full_test: 2_000,
         run: (a: _JNum) => J.dispatchUnaryOp("test", a),
         setup: () => {
             J = new JNum();

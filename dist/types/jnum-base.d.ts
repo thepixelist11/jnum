@@ -1,4 +1,4 @@
-import { JNum } from "jnum-runtime";
+import { JNum } from "./jnum-runtime";
 /**
  * Hints used for primitive coercion.
  *
@@ -26,6 +26,8 @@ export type JNumType = symbol;
 export declare abstract class _JNum {
     /** The runtime type of this value */
     abstract readonly type: JNumType;
+    /** The static registered type of this value */
+    static Type: JNumType;
     /** The instance of JNum under which this type is registered */
     abstract readonly J: JNum;
     /**

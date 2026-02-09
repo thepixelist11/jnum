@@ -1,11 +1,28 @@
 import { runSuite, TIMER_FN, JIT_ITERS } from "./harness";
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import process from "process";
 import path from "path";
 import url from "url";
 import os from "os";
 import v8 from "v8";
 import fs from "fs";
+
+function isChild() {
+    return process.argv.some(a => a.startsWith("--__child="));
+}
+
+function parseChildArg() {
+    const arg = process.argv.find(a => a.startsWith("--__child="));
+    if (!arg) throw new Error("missing child arg");
+
+    const payload = arg.split("=", 2)[1];
+    const [file, index_str] = payload.split(":");
+    const index = Number(index_str);
+
+    if (!Number.isInteger(index)) throw new Error("invalid benchmark index");
+
+    return { file, index };
+}
 
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
@@ -21,12 +38,12 @@ const SUITES: Suite[] = [
             "./unary/cold-vs-warm.ts"
         ]
     },
-    // {
-    //     name: "Binary",
-    //     files: [
-    //         "./binary/cold-vs-warm.ts"
-    //     ]
-    // }
+    {
+        name: "Binary",
+        files: [
+            "./binary/cold-vs-warm.ts"
+        ]
+    }
 ];
 
 interface CPUStatInfo {
@@ -166,6 +183,26 @@ function pad(str: string, padChar: string, charCount: number = 1): string {
     return padding + newStr + padding;
 }
 
+if (isChild()) {
+    const { file, index } = parseChildArg();
+
+    try {
+        global.gc?.();
+
+        const tests = (await import(path.resolve(file))).default;
+        if (!tests || !tests[index]) {
+            throw new Error(`Benchmark index ${index} not found`);
+        }
+
+        runSuite([tests[index]]);
+    } catch (err) {
+        console.error(`Failed to run ${file}[${index}]:\n${String(err)}`);
+        process.exit(1);
+    }
+
+    process.exit(0);
+}
+
 const args = process.argv.slice(2);
 const selected = args.length === 0
     ? SUITES
@@ -180,16 +217,32 @@ for (const suite of selected) {
 
     for (const file of suite.files) {
         const full = path.join(__dirname, file);
+        let tests: unknown[];
 
         try {
-            global.gc?.();
-            const tests = (await import(full)).default;
-            if (!tests) continue;
-
-            runSuite(tests);
+            tests = (await import(full)).default;
+            if (!Array.isArray(tests)) continue;
         } catch (err) {
-            console.error(`Failed to run ${file}: \n${String(err)}`);
+            console.error(`Failed to load ${full}:\n${String(err)}`);
             continue;
+        }
+
+        for (let i = 0; i < tests.length; i++) {
+            const res = spawnSync(
+                process.execPath,
+                [
+                    ...process.execArgv,
+                    process.argv[1],
+                    `--__child=${full}:${i}`,
+                ],
+                {
+                    stdio: "inherit",
+                    env: process.env
+                }
+            );
+
+            if (res.status !== 0)
+                console.error(`Benchmark ${full}[${i}] failed`);
         }
     }
 }

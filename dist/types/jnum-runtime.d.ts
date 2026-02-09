@@ -126,7 +126,7 @@ export declare class JNum {
      * all promotion and dispatch caches to ensure that newly registered types can
      * participate in operations and promotions.
      */
-    registerType(t: string): void;
+    registerType(t: string | symbol): JNumType;
     /**
      * Registers a unary operation kernel for a specific type.
      *

@@ -57,7 +57,7 @@ export function runBenchmark<N extends 0 | 1 | 2 | 3 | 4>(b: Benchmark<N>): Benc
 
         if (arity !== (b.run as Function).length) {
             throw new Error(
-                `Arity mismatch: run expects ${((b.run as Function).length)} arguments, got ${arity}`
+                `Arity mismatch: run expects ${((b.run as Function).length)} arguments, got ${arity} (${b.name})`
             );
         }
 
