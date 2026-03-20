@@ -1,4 +1,4 @@
-import type { JNumType } from "./jnum-base"
+import type { JNumType } from "./jnum-base";
 import { _JNum } from "./jnum-base";
 import { MinHeap } from "./utils/min-heap";
 import { OrderedMap } from "./utils/ordered-map";
@@ -9,7 +9,7 @@ import { OrderedMap } from "./utils/ordered-map";
 export interface RegisteredType {
     /** Unique type identifier */
     id: symbol;
-};
+}
 
 interface UnaryDispatchPlan {
     kernel: ErasedUnaryOpKernel;
@@ -25,8 +25,7 @@ interface UnaryDispatchPlan {
  * @param arg The argument to operate on.
  * @returns The result of the unary operation.
  */
-export type UnaryOpKernel<T extends _JNum = _JNum, R = unknown> =
-    (arg: T) => R;
+export type UnaryOpKernel<T extends _JNum = _JNum, R = unknown> = (arg: T) => R;
 
 type ErasedUnaryOpKernel = UnaryOpKernel<_JNum, unknown>;
 
@@ -43,8 +42,11 @@ export type Operation = string;
  * @param rhs The right-hand operand.
  * @returns The result of the binary operation.
  */
-export type BinaryOpKernel<LHS extends _JNum = _JNum, RHS extends _JNum = _JNum, R = _JNum> =
-    (lhs: LHS, rhs: RHS) => R;
+export type BinaryOpKernel<
+    LHS extends _JNum = _JNum,
+    RHS extends _JNum = _JNum,
+    R = _JNum,
+> = (lhs: LHS, rhs: RHS) => R;
 
 type ErasedBinaryOpKernel = (lhs: _JNum, rhs: _JNum) => unknown;
 
@@ -54,7 +56,7 @@ interface DispatchPlan {
     rhs_fn: (v: _JNum) => _JNum;
     lhs_target: JNumType;
     rhs_target: JNumType;
-};
+}
 
 /**
  * A function that performs an n-ary operation on an array of JNum values.
@@ -63,8 +65,7 @@ interface DispatchPlan {
  * @param args Array of input JNum values.
  * @returns The result of the n-ary operation.
  */
-export type NAryKernel<R = _JNum> =
-    (args: readonly _JNum[]) => R;
+export type NAryKernel<R = _JNum> = (args: readonly _JNum[]) => R;
 
 /**
  * A promotion rule from one JNum type to another.
@@ -81,7 +82,7 @@ export interface PromotionRule {
 
     /** Applies the promotion to a value. */
     apply(v: _JNum): _JNum;
-};
+}
 
 type TypePredicate<T> = (x: unknown) => x is T;
 type GuardedType<Pred> = Pred extends (x: unknown) => x is infer U ? U : never;
@@ -105,9 +106,9 @@ export interface JNumConstructor<T, Pred extends TypePredicate<T>> {
 
     /** Function that converts a JNum from a value of the given type. */
     constructor: GuardedTypeFn<Pred>;
-};
+}
 
-type JNumObj<T = _JNum> = ((x: unknown) => T);
+type JNumObj<T = _JNum> = (x: unknown) => T;
 
 type JNumOp<T> = (...args: _JNum[]) => T;
 type JNumWithOps<T = unknown> = Record<string, JNumOp<T>> & JNumObj;
@@ -144,13 +145,21 @@ export class JNum {
     private readonly PROMOTIONS: PromotionRule[] = [];
     private readonly PROMOTION_ADJ = new Map<JNumType, PromotionRule[]>();
 
-    private readonly PRECOMPUTED_PROMOTION_PATHS = new Map<JNumType, Map<JNumType, { cost: number, path: PromotionRule[] }>>();
-    private readonly PRECOMPUTED_REACHABLE_CACHE = new Map<JNumType, JNumType[]>();
+    private readonly PRECOMPUTED_PROMOTION_PATHS = new Map<
+        JNumType,
+        Map<JNumType, { cost: number; path: PromotionRule[] }>
+    >();
+    private readonly PRECOMPUTED_REACHABLE_CACHE = new Map<
+        JNumType,
+        JNumType[]
+    >();
 
     private __promotion_paths_precomputed = false;
     private __reachable_paths_precomputed = false;
 
-    private readonly JNUM_CONSTRUCTORS = new OrderedMap<JNumConstructor<unknown, TypePredicate<unknown>>>();
+    private readonly JNUM_CONSTRUCTORS = new OrderedMap<
+        JNumConstructor<unknown, TypePredicate<unknown>>
+    >();
 
     /**
      * Gets the JNumType symbol associated with a given string, or creates it
@@ -243,10 +252,12 @@ export class JNum {
     public registerUnaryOp<T extends _JNum = _JNum, R = _JNum>(
         op: Operation,
         type: JNumType,
-        kernel: UnaryOpKernel<T, R>
+        kernel: UnaryOpKernel<T, R>,
     ): void {
         if (this.opRegistered(op, { unary: true }))
-            throw new Error(`Operation ${op} already registered with another arity`);
+            throw new Error(
+                `Operation ${op} already registered with another arity`,
+            );
 
         let map = this.UNARY_OPS.get(op);
         if (!map) {
@@ -279,10 +290,7 @@ export class JNum {
      * Dispatch uses cached dispatch plans when available. If no plan exists, it
      * searches for the best type promotion path to a registered kernel.
      */
-    public dispatchUnaryOp<R = _JNum>(
-        op: Operation,
-        arg: _JNum
-    ): R {
+    public dispatchUnaryOp<R = _JNum>(op: Operation, arg: _JNum): R {
         let op_cache = this.UNARY_DISPATCH_CACHE.get(op);
         if (!op_cache) {
             op_cache = new Map();
@@ -290,19 +298,17 @@ export class JNum {
         }
 
         const cached = op_cache.get(arg.type);
-        if (cached)
-            return cached.kernel(cached.promote(arg)) as R;
+        if (cached) return cached.kernel(cached.promote(arg)) as R;
 
         const map = this.UNARY_OPS.get(op);
-        if (!map)
-            throw new Error(`Operation ${op} not defined`);
+        if (!map) throw new Error(`Operation ${op} not defined`);
 
         const direct = map.get(arg.type);
         if (direct) {
             const plan: UnaryDispatchPlan = {
                 kernel: direct as ErasedUnaryOpKernel,
-                promote: v => v,
-                target: arg.type
+                promote: (v) => v,
+                target: arg.type,
             };
 
             op_cache.set(arg.type, plan);
@@ -329,7 +335,9 @@ export class JNum {
         }
 
         if (!best)
-            throw new Error(`Operation ${op} not defined for ${arg.type.description}`);
+            throw new Error(
+                `Operation ${op} not defined for ${arg.type.description}`,
+            );
 
         op_cache.set(arg.type, best);
         return best.kernel(best.promote(arg)) as R;
@@ -360,7 +368,11 @@ export class JNum {
      * Returns an iterable of all registered operation names.
      */
     public allOperations(): Iterable<Operation> {
-        return [...this.BINARY_OPS.keys(), ...this.UNARY_OPS.keys(), ...this.NARY_OPS.keys()];
+        return [
+            ...this.BINARY_OPS.keys(),
+            ...this.UNARY_OPS.keys(),
+            ...this.NARY_OPS.keys(),
+        ];
     }
 
     /**
@@ -388,18 +400,16 @@ export class JNum {
      * Dispatch caches are invalidated, and the operation is installed on the
      * `JNum` object.
      */
-    public registerBinaryOp<
-        LHS extends _JNum,
-        RHS extends _JNum,
-        R,
-    >(
+    public registerBinaryOp<LHS extends _JNum, RHS extends _JNum, R>(
         op: Operation,
         lhs: JNumType,
         rhs: JNumType,
-        kernel: BinaryOpKernel<LHS, RHS, R>
+        kernel: BinaryOpKernel<LHS, RHS, R>,
     ): void {
         if (this.opRegistered(op, { binary: true }))
-            throw new Error(`Operation ${op} already registered with another arity`);
+            throw new Error(
+                `Operation ${op} already registered with another arity`,
+            );
 
         let lhs_map = this.BINARY_OPS.get(op);
         if (!lhs_map) {
@@ -468,15 +478,11 @@ export class JNum {
      * the JNum object if the name of the operator matches that of a member of
      * Function.prototype.
      */
-    public registerBinaryOpCommutative<
-        LHS extends _JNum,
-        RHS extends _JNum,
-        R
-    >(
+    public registerBinaryOpCommutative<LHS extends _JNum, RHS extends _JNum, R>(
         op: Operation,
         lhs: JNumType,
         rhs: JNumType,
-        kernel: BinaryOpKernel<LHS | RHS, RHS | LHS, R>
+        kernel: BinaryOpKernel<LHS | RHS, RHS | LHS, R>,
     ) {
         this.registerBinaryOp<LHS, RHS, R>(op, lhs, rhs, kernel);
         if (lhs !== rhs)
@@ -495,14 +501,14 @@ export class JNum {
     public getBinaryOp(
         op: Operation,
         lhs: JNumType,
-        rhs: JNumType
+        rhs: JNumType,
     ): ErasedBinaryOpKernel | null {
         return this.BINARY_OPS.get(op)?.get(lhs)?.get(rhs) ?? null;
     }
 
     private promotionCostAndPath(
         from: JNumType,
-        to: JNumType
+        to: JNumType,
     ): { cost: number; path: PromotionRule[] } | null {
         if (from === to) return { cost: 0, path: [] };
         const inner = this.PRECOMPUTED_PROMOTION_PATHS.get(from);
@@ -511,8 +517,8 @@ export class JNum {
     }
 
     private composePromotion(rules: PromotionRule[]): (v: _JNum) => _JNum {
-        if (!rules.length) return v => v;
-        return v => rules.reduce((acc, r) => r.apply(acc), v);
+        if (!rules.length) return (v) => v;
+        return (v) => rules.reduce((acc, r) => r.apply(acc), v);
     }
 
     private resolveDispatchPlan(
@@ -524,8 +530,8 @@ export class JNum {
         if (direct) {
             return {
                 kernel: direct,
-                lhs_fn: v => v,
-                rhs_fn: v => v,
+                lhs_fn: (v) => v,
+                rhs_fn: (v) => v,
                 lhs_target: lhs_type,
                 rhs_target: rhs_type,
             };
@@ -613,7 +619,9 @@ export class JNum {
         if (!plan) {
             plan = this.resolveDispatchPlan(op, lhs.type, rhs.type);
             if (!plan)
-                throw new Error(`Operation ${op} not defined for ${lhs.type.description} and ${rhs.type.description}`);
+                throw new Error(
+                    `Operation ${op} not defined for ${lhs.type.description} and ${rhs.type.description}`,
+                );
 
             rhs_map.set(rhs.type, plan);
         }
@@ -654,10 +662,12 @@ export class JNum {
      */
     public registerNAryOp<R = _JNum>(
         op: Operation,
-        kernel: NAryKernel<R>
+        kernel: NAryKernel<R>,
     ): void {
         if (this.opRegistered(op, { nary: true }))
-            throw new Error(`Operation ${op} already registered with another arity`);
+            throw new Error(
+                `Operation ${op} already registered with another arity`,
+            );
 
         this.NARY_OPS.set(op, kernel);
 
@@ -697,11 +707,11 @@ export class JNum {
     public registerNAryOpOnType<R = _JNum>(
         op: Operation,
         target: JNumType,
-        kernel: (args: readonly _JNum[]) => R
+        kernel: (args: readonly _JNum[]) => R,
     ): void {
-        this.registerNAryOp(op, args => {
-            const promoted = args.map(a =>
-                a.type === target ? a : this.promoteValue(a, target)
+        this.registerNAryOp(op, (args) => {
+            const promoted = args.map((a) =>
+                a.type === target ? a : this.promoteValue(a, target),
             );
             return kernel(promoted);
         });
@@ -737,7 +747,7 @@ export class JNum {
     public reduceBinary(
         op: Operation,
         args: readonly _JNum[],
-        reverse = false
+        reverse = false,
     ): _JNum {
         if (args.length < 2)
             throw new Error(`Operation ${op} requires at least two arguments`);
@@ -755,7 +765,10 @@ export class JNum {
         }
     }
 
-    private opRegistered(op: string, allowed: { unary?: boolean; binary?: boolean; nary?: boolean } = {}): boolean {
+    private opRegistered(
+        op: string,
+        allowed: { unary?: boolean; binary?: boolean; nary?: boolean } = {},
+    ): boolean {
         return (
             (!allowed.unary && this.UNARY_OPS.has(op)) ||
             (!allowed.binary && this.BINARY_OPS.has(op)) ||
@@ -792,7 +805,9 @@ export class JNum {
      */
     public registerPromotion(rule: PromotionRule): void {
         if (rule.cost < 1)
-            throw new Error("Attempted to register a promotion rule with non-positive cost; zero or negative cost rules may cause cycles in promotion path lookups");
+            throw new Error(
+                "Attempted to register a promotion rule with non-positive cost; zero or negative cost rules may cause cycles in promotion path lookups",
+            );
 
         this.PROMOTIONS.push(rule);
 
@@ -871,11 +886,12 @@ export class JNum {
 
         const path = this.findPromotionPath(v.type, target);
         if (!path)
-            throw new Error(`No promotion path from ${v.type.description} to ${target.description}`);
+            throw new Error(
+                `No promotion path from ${v.type.description} to ${target.description}`,
+            );
 
         let out = v;
-        for (const rule of path)
-            out = rule.apply(out);
+        for (const rule of path) out = rule.apply(out);
 
         return out;
     }
@@ -886,14 +902,18 @@ export class JNum {
         return this.PRECOMPUTED_REACHABLE_CACHE.get(from) ?? [];
     }
 
-    private reachableTypesFiltered(op: Operation, from: JNumType, is_lhs: boolean): JNumType[] {
+    private reachableTypesFiltered(
+        op: Operation,
+        from: JNumType,
+        is_lhs: boolean,
+    ): JNumType[] {
         const base = this.reachableTypes(from);
         const allowed = is_lhs
             ? this.BINARY_LHS_TYPES.get(op)
             : this.BINARY_RHS_TYPES.get(op);
 
         if (!allowed) return [];
-        return base.filter(t => allowed.has(t));
+        return base.filter((t) => allowed.has(t));
     }
 
     /**
@@ -920,8 +940,14 @@ export class JNum {
      * precedence matching constructor will be used when creating a JNum from a
      * value.
      */
-    public registerJNumConstructor<T>(constructor: JNumConstructor<T, TypePredicate<T>>) {
-        this.JNUM_CONSTRUCTORS.insert(constructor.precedence, constructor, constructor.id);
+    public registerJNumConstructor<T>(
+        constructor: JNumConstructor<T, TypePredicate<T>>,
+    ) {
+        this.JNUM_CONSTRUCTORS.insert(
+            constructor.precedence,
+            constructor,
+            constructor.id,
+        );
     }
 
     /**
@@ -960,7 +986,7 @@ export class JNum {
             }
 
             throw new Error(`Invalid JNum constructor of type ${typeof x}`);
-        }
+        };
 
         const Num = JNumFn as unknown as JNumWithOps;
 
@@ -976,7 +1002,8 @@ export class JNum {
     }
 
     private installBinaryOp(op: Operation) {
-        this.Num[op] ??= (a: _JNum, b: _JNum) => this.dispatchBinaryOp(op, a, b);
+        this.Num[op] ??= (a: _JNum, b: _JNum) =>
+            this.dispatchBinaryOp(op, a, b);
     }
 
     private installNAryOp(op: Operation, kernel: NAryKernel<unknown>) {
@@ -1022,8 +1049,8 @@ export class JNum {
                 if (direct) {
                     cache.set(from, {
                         kernel: direct as ErasedUnaryOpKernel,
-                        promote: v => v,
-                        target: from
+                        promote: (v) => v,
+                        target: from,
                     });
                     continue;
                 }
@@ -1039,12 +1066,11 @@ export class JNum {
                     best = {
                         kernel: kernel as ErasedUnaryOpKernel,
                         promote: this.composePromotion(pc.path),
-                        target: to
+                        target: to,
                     };
                 }
 
-                if (best)
-                    cache.set(from, best);
+                if (best) cache.set(from, best);
             }
         }
     }
@@ -1085,8 +1111,7 @@ export class JNum {
                 if (seen.has(cur)) continue;
                 seen.add(cur);
                 for (const r of this.PROMOTIONS)
-                    if (r.from === cur)
-                        stack.push(r.to);
+                    if (r.from === cur) stack.push(r.to);
             }
             this.PRECOMPUTED_REACHABLE_CACHE.set(t, [...seen]);
         }
@@ -1097,7 +1122,10 @@ export class JNum {
     public precomputePromotionPaths() {
         this.invalidatePromotionCache();
         for (const from of this.TYPES.keys()) {
-            const inner = new Map<JNumType, { cost: number; path: PromotionRule[] }>();
+            const inner = new Map<
+                JNumType,
+                { cost: number; path: PromotionRule[] }
+            >();
             for (const to of this.TYPES.keys()) {
                 const path = this.findPromotionPath(from, to);
                 if (path) {
@@ -1111,4 +1139,3 @@ export class JNum {
         this.__promotion_paths_precomputed = true;
     }
 }
-

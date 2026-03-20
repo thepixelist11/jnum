@@ -1,7 +1,9 @@
 export class MinHeap<T> {
-    private heap: { value: T, priority: number }[] = [];
+    private heap: { value: T; priority: number }[] = [];
 
-    public get size() { return this.heap.length; }
+    public get size() {
+        return this.heap.length;
+    }
 
     public insert(value: T, priority: number): void {
         this.heap.push({ value, priority });
@@ -43,12 +45,17 @@ export class MinHeap<T> {
             if (
                 left_idx < length &&
                 this.heap[left_idx].priority < element.priority
-            ) swap = left_idx;
+            )
+                swap = left_idx;
 
             if (
                 right_idx < length &&
-                this.heap[right_idx].priority < (swap === null ? element.priority : this.heap[left_idx].priority)
-            ) swap = right_idx;
+                this.heap[right_idx].priority <
+                    (swap === null
+                        ? element.priority
+                        : this.heap[left_idx].priority)
+            )
+                swap = right_idx;
 
             if (swap === null) break;
             this.heap[idx] = this.heap[swap];

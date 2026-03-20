@@ -1,13 +1,7 @@
 export { JNum } from "./jnum-runtime";
-
-export type { Operation } from "./jnum-runtime"
-
+export type { Operation } from "./jnum-runtime";
 export { _JNum } from "./jnum-base";
-
-export type {
-    PrimitiveHint,
-    JNumType,
-} from "./jnum-base";
+export type { PrimitiveHint, JNumType } from "./jnum-base";
 
 import {
     OP_ADD,
@@ -21,7 +15,7 @@ import {
     OP_EQ,
     OP_NEQ,
     OP_ABS,
-    OP_NEG
+    OP_NEG,
 } from "./operators/op_names";
 
 export const OPS = {
@@ -36,6 +30,5 @@ export const OPS = {
     OP_EQ,
     OP_NEQ,
     OP_ABS,
-    OP_NEG
+    OP_NEG,
 } as const;
-

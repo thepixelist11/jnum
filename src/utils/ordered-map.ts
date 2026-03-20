@@ -6,11 +6,10 @@ interface Entry<T> {
 
 export class OrderedMap<T> {
     private entries: Entry<T>[] = [];
-    private entry_ids = new Set<symbol>;
+    private entry_ids = new Set<symbol>();
 
     insert(rank: number, value: T, id?: symbol): boolean {
-        if (id && this.entry_ids.has(id))
-            return false;
+        if (id && this.entry_ids.has(id)) return false;
 
         const index = this.findInsertIndex(rank);
         this.entries.splice(index, 0, { rank, value, id });
@@ -42,4 +41,3 @@ export class OrderedMap<T> {
         return low;
     }
 }
-

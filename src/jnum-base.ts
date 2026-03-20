@@ -10,7 +10,6 @@ import { JNum } from "./jnum-runtime";
  */
 export type PrimitiveHint = "string" | "number" | "default";
 
-
 /**
  * A unique identifier for a JNum type. This is a semantic alias for a symbol.
  */
@@ -45,7 +44,9 @@ export abstract class _JNum {
      * Subclasses may override this behaviour if a custom string representation
      * is required.
      */
-    public toString(): string { return `${this}` };
+    public toString(): string {
+        return `${this}`;
+    }
 
     /**
      * Provides the value for `Object.prototype.toString.call(this)`.
@@ -53,5 +54,7 @@ export abstract class _JNum {
      * @remarks
      * Returns the description of the associated `JNumType`, if present.
      */
-    public [Symbol.toStringTag]() { return this.type.description; }
+    public [Symbol.toStringTag]() {
+        return this.type.description;
+    }
 }
